@@ -1,0 +1,30 @@
+{
+  "name": "willy-bot",
+  "version": "1.0.0",
+  "description": "like wally and welly, but next-gen",
+  "main": "willy.js",
+  "dependencies": {
+    "irc": "^0.4.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dulrich/willy-bot"
+  },
+  "keywords": [
+    "willy",
+    "wally",
+    "irc",
+    "irc-bot",
+    "silliness"
+  ],
+  "author": "David Ulrich (dvulrich47@gmail.com)",
+  "license": "AGPLV3",
+  "bugs": {
+    "url": "https://github.com/dulrich/willy-bot/issues"
+  },
+  "homepage": "https://github.com/dulrich/willy-bot"
+}
