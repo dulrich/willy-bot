@@ -22,6 +22,8 @@ var _ = require("lodash"),
 var config = require("./config.json");
 
 config.regex_command = new RegExp("^"+config.name+"\\b","i");
+config.verbosity = config.verbosity || 1.0;
+config.version = "willy-bot-1.0.3";
 
 function delay(fn,thisarg,args,millis) {
 	setTimeout(function() {
@@ -37,6 +39,10 @@ function rand(max) {
 	return Math.floor(Math.random() * max);
 }
 
+function rand_el(list) {
+	return list[rand(list.length)];
+}
+
 function trace(msg) {
 	log("TRACE: " + msg);
 }
@@ -48,13 +54,22 @@ function replace_tokens(str,from,m_match) {
 	
 	out = out.replace(/\?from\b/g,from);
 	out = out.replace(/\?match\b/g,(m_match && m_match[0]) || "");
-	out = out.replace(/\?rand_noun\b/g,noun_list[rand(noun_list.length)]);
+	
+	out = out.replace(/\?rand_lang\b/g,rand_el(lang_list));
+	out = out.replace(/\?rand_noun\b/g,rand_el(noun_list));
+	
+	out = out.replace(/\?version\b/g,config.version);
 	
 	return out;
 }
 
 function send(to,from,message,m_match) {
 	message = replace_tokens(message,from,m_match);
+	
+	if (Math.random() > config.verbosity) {
+		log("VERBOSITY LIMITED");
+		return;
+	}
 	
 	if (message.match(/^\/me\s+/)) {
 		client.action(to,message.replace(/^\/me\s+/,""));
@@ -69,11 +84,12 @@ function send(to,from,message,m_match) {
 var client = new irc.Client(config.server,config.name,{
 	// sasl : true,
 	// port : 6697,
-	// nick : config.name,
 	// userName : 
 	// password : 
 	
 	channels : config.channels,
+	floodProtection : true,
+	floodProtectionDelay : 500,
 	
 	realName : config.realName || "unknown",
 	userName : config.userName || "unknown"
@@ -82,7 +98,8 @@ var client = new irc.Client(config.server,config.name,{
 var state = {
 	last_action  : "",
 	last_message : "",
-	last_pattern : null
+	last_pattern : null,
+	last_repeat  : ""
 };
 
 var action_modifiers = [
@@ -95,9 +112,15 @@ var action_modifiers = [
 var command_list = [{
 	pattern : /(get out|leave)/i,
 	reply  : function(from,to,input) {
+		var partings = [
+			"ok ?from, i'm out",
+			"/me flees",
+			"/me hits the road"
+		];
+		
 		delay(client.part,client,[to],100);
 		
-		return "ok ?from, i'm out";
+		return rand_el(partings);
 	}
 },
 {
@@ -117,13 +140,40 @@ var command_list = [{
 			"?from: it's " + moment().valueOf() + "ms into the Unix Epoch"
 		];
 		
-		return times[rand(times.length)];
+		return rand_el(times);
 	}
 },
 {
+	pattern : /(who are you|version)/i,
+	reply   : ["?version at your service","?version reporting for duty"]
+},
+{
 	pattern : /.?/,
-	reply   : ["i am not the bot you are looking for","who, me?"]
+	reply   : [
+		"do you even speak ?rand_lang?",
+		"i am not the bot you are looking for",
+		"who, me?"
+	]
 }];
+
+var lang_list = [
+	"arabic",
+	"chinese",
+	"english",
+	"french",
+	"german",
+	"hungarian",
+	"italian",
+	"japanese",
+	"latin",
+	"mandarin",
+	"norwegian",
+	"polish",
+	"russian",
+	"thai",
+	"vietnamese",
+	"welsh"
+];
 
 var noun_list = [
 	"n AK-47",
@@ -140,12 +190,18 @@ var noun_list = [
 ];
 
 var repeat_list = [
-	"?from do you know how to read?",
+	"?from, do you know how to read?",
+	"?rand_lang. learn to read it",
+	"my grandmother is more creative than you",
+	"same old, same old...",
 	"that sounds familiar",
 	"stfu somebody already said that"
 ];
 
 var pattern_list = [{
+	pattern : /goat/i,
+	reply   : ["goats. Goats! GOATS!!!","1 goat, 2 goat, red goat, blue goat"]
+},{
 	pattern : /(hitler|nazis?)/i,
 	reply   : ["you say ?match? by Godwin's law I say... YOU LOSE!"]
 },{
@@ -185,7 +241,7 @@ function handle_command(from,to,message) {
 		handled = true;
 		
 		if (isfn(c.reply)) out = c.reply(from,to,message);
-		else out = c.reply[rand(c.reply.length)];
+		else out = rand_el(c.reply);
 		
 		send(to,from,out,m_command);
 	});
@@ -194,7 +250,13 @@ function handle_command(from,to,message) {
 }
 
 function handle_repeat(from,to,message) {
-	send(to,from,repeat_list[rand(repeat_list.length)]);
+	var repeat = rand_el(repeat_list);
+	
+	if (repeat == state.last_repeat) return;
+	
+	state.last_repeat = repeat;
+	
+	send(to,from,repeat,"");
 }
 
 function handle_message(from, to, message) {
@@ -223,7 +285,7 @@ function handle_message(from, to, message) {
 		if (!handled && m_message && state.last_pattern != p.pattern) {
 			state.last_pattern = p.pattern;
 			
-			out = p.reply[rand(p.reply.length)];
+			out = rand_el(p.reply);
 			
 			send(to,from,out,m_message);
 			
@@ -251,7 +313,7 @@ function handle_action(from,to,text,message) {
 	
 	state.last_action = text;
 	
-	action_modifier = action_modifiers[rand(action_modifiers.length)];
+	action_modifier = rand_el(action_modifiers);
 	
 	send(to,from,text + " " + action_modifier);
 }

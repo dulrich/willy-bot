@@ -4,6 +4,12 @@
 * get part of speech dictionary into db
 * implement op commands
 
+# 2015-12-11 -- 1.0.3
+* debounce repeat messages
+* configurable verbosity
+* random languages
+* version command
+
 # 2015-12-10 -- 1.0.2
 * actually use config.json
 * add more date replies
