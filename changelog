@@ -1,10 +1,13 @@
 # todo
 
-* actually use config.json
 * store responses in db
 * get part of speech dictionary into db
 * implement op commands
 
+# 2015-12-10 -- 1.0.2
+* actually use config.json
+* add more date replies
+* part/quit commands
 
 # 2015-12-10 -- 1.0.1
 * scaffold out the basic project framework files

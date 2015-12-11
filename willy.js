@@ -14,17 +14,31 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-var irc = require("irc"),
-	log = console.log;
+var _ = require("lodash"),
+	irc = require("irc"),
+	log = console.log,
+	moment = require("moment");
 
-var config = {
-	channels : ["#hardcorepandas"],
-	name     : "willy",
-	server   : "irc.foonetic.net"
-};
+var config = require("./config.json");
+
+config.regex_command = new RegExp("^"+config.name+"\\b","i");
+
+function delay(fn,thisarg,args,millis) {
+	setTimeout(function() {
+		fn.apply(thisarg,args);
+	},millis);
+}
+
+function isfn(f) {
+	return typeof f == "function";
+}
 
 function rand(max) {
 	return Math.floor(Math.random() * max);
+}
+
+function trace(msg) {
+	log("TRACE: " + msg);
 }
 
 function replace_tokens(str,from) {
@@ -38,6 +52,19 @@ function replace_tokens(str,from) {
 	return out;
 }
 
+function send(to,from,message) {
+	message = replace_tokens(message,from);
+	
+	if (message.match(/^\/me\s+/)) {
+		client.action(to,message.replace(/^\/me\s+/,""));
+	}
+	else {
+		client.say(to,message);
+	}
+	
+	log("ISAID: " + message);
+}
+
 var client = new irc.Client(config.server,config.name,{
 	// sasl : true,
 	// port : 6697,
@@ -45,7 +72,10 @@ var client = new irc.Client(config.server,config.name,{
 	// userName : 
 	// password : 
 	
-	channels : config.channels
+	channels : config.channels,
+	
+	realName : config.realName || "unknown",
+	userName : config.userName || "unknown"
 });
 
 var state = {
@@ -61,6 +91,39 @@ var action_modifiers = [
 	"better than ?from"
 ];
 
+var command_list = [{
+	pattern : /(get out|leave)/i,
+	reply  : function(from,to,input) {
+		delay(client.part,client,[to],100);
+		
+		return "ok ?from, i'm out";
+	}
+},
+{
+	pattern : /(go die|kill you)/i,
+	reply  : function(from,to,input) {
+		delay(process.exit,null,[],100);
+		
+		return "/me commits suicide with a?rand_noun";
+	}
+},
+{
+	pattern : /(got the time\??|what time is it\??)/i,
+	reply   : function(from,to,input) {
+		var times = [
+			"?from: it's " + moment().format("llll") + " here",
+			"?from: tomorrow is " + moment().to(moment().endOf("day")),
+			"?from: it's " + moment().valueOf() + "ms into the Unix Epoch"
+		];
+		
+		return times[rand(times.length)];
+	}
+},
+{
+	pattern : /.?/,
+	reply   : ["i am not the bot you are looking for","who, me?"]
+}];
+
 var noun_list = [
 	"n AK-47",
 	" boom stick",
@@ -75,7 +138,13 @@ var noun_list = [
 	" water bottle"
 ];
 
-var patterns = [{
+var repeat_list = [
+	"?from do you know how to read?",
+	"that sounds familiar",
+	"stfu somebody already said that"
+];
+
+var pattern_list = [{
 	pattern : /panda/i,
 	reply   : ["Yay pandas!","I <3 pandas :D"]
 },{
@@ -90,37 +159,75 @@ client.addListener('error', function(message) {
 	log('error: ', message);
 });
 
+function handle_command(from,to,message) {
+	var handled,input,out;
+	
+	trace("handle_command");
+	
+	// strip out the bot name for commands in a channel
+	input = message.replace(config.regex_command,"");
+	// trim leading 
+	input = input.replace(/^[\s,:]+/,"").replace(/\s+$/,"");
+	
+	command_list.forEach(function(c) {
+		if (!handled && input.match(c.pattern)) {
+			handled = true;
+			
+			if (isfn(c.reply)) out = c.reply(from,to,message);
+			else out = c.reply[rand(c.reply.length)];
+		}
+	});
+	
+	if (handled) send(to,from,out);
+	
+	return handled;
+}
+
+function handle_repeat(from,to,message) {
+	send(to,from,repeat_list[rand(repeat_list.length)]);
+}
+
 function handle_message(from, to, message) {
+	var handled;
+	
+	trace("handle_message");
 	log(from + ' => ' + to + ': ' + message);
 	
-	if (message == state.last_message) return;
+	if (message == state.last_message) return handle_repeat(from,to,message);
+	
+	if (message.match(config.regex_command)) {
+		state.last_message = message;
+		
+		handled = handle_command(from,to,message);
+	}
+	
+	if (handled) return;
 	
 	state.last_message = message;
 	
-	patterns.forEach(function(p,i) {
+	pattern_list.forEach(function(p) {
 		var out;
 		
-		if (message.match(p.pattern) && state.last_pattern != p.pattern) {
+		if (!handled && message.match(p.pattern) && state.last_pattern != p.pattern) {
 			state.last_pattern = p.pattern;
 			
 			out = p.reply[rand(p.reply.length)];
 			
-			out = replace_tokens(out,from);
+			send(to,from,out);
 			
-			if (out.match(/^\/me\s+/)) {
-				client.action(to,out.replace(/^\/me\s+/,""));
-			}
-			else {
-				client.say(to,out);
-			}
+			handled = true;
 		}
 	});
 }
 client.addListener("message",handle_message);
+client.addListener("pm",function(from,message) {
+	handle_message(from,from,message);
+});
 
 function handle_action(from,to,text,message) {
 	var action_modifier,chance;
 	
+	trace("handle_action");
 	log(from + ' => ' + to + ' action: ' + text);
 	
 	chance = rand(3);
@@ -134,9 +241,7 @@ function handle_action(from,to,text,message) {
 	
 	action_modifier = action_modifiers[rand(action_modifiers.length)];
 	
-	action_modifier = replace_tokens(action_modifier,from);
-	
-	client.action(to,text + " " + action_modifier);
+	send(to,from,text + " " + action_modifier);
 }
 client.addListener("action",handle_action);
 

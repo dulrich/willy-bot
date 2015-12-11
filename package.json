@@ -4,7 +4,9 @@
   "description": "like wally and welly, but next-gen",
   "main": "willy.js",
   "dependencies": {
-    "irc": "^0.4.0"
+    "irc": "^0.4.0",
+    "lodash": "^3.10.1",
+    "moment": "^2.10.6"
   },
   "devDependencies": {},
   "scripts": {
