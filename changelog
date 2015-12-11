@@ -1,0 +1,13 @@
+# todo
+
+* actually use config.json
+* store responses in db
+* get part of speech dictionary into db
+* implement op commands
+
+
+# 2015-12-10 -- 1.0.1
+* scaffold out the basic project framework files
+
+# 2015-12-09 -- 1.0.0
+* initial version
