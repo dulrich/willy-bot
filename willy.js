@@ -41,19 +41,20 @@ function trace(msg) {
 	log("TRACE: " + msg);
 }
 
-function replace_tokens(str,from) {
+function replace_tokens(str,from,m_match) {
 	var out;
 	
 	out = str;
 	
 	out = out.replace(/\?from\b/g,from);
+	out = out.replace(/\?match\b/g,(m_match && m_match[0]) || "");
 	out = out.replace(/\?rand_noun\b/g,noun_list[rand(noun_list.length)]);
 	
 	return out;
 }
 
-function send(to,from,message) {
-	message = replace_tokens(message,from);
+function send(to,from,message,m_match) {
+	message = replace_tokens(message,from,m_match);
 	
 	if (message.match(/^\/me\s+/)) {
 		client.action(to,message.replace(/^\/me\s+/,""));
@@ -145,6 +146,9 @@ var repeat_list = [
 ];
 
 var pattern_list = [{
+	pattern : /(hitler|nazis?)/i,
+	reply   : ["you say ?match? by Godwin's law I say... YOU LOSE!"]
+},{
 	pattern : /panda/i,
 	reply   : ["Yay pandas!","I <3 pandas :D"]
 },{
@@ -170,15 +174,21 @@ function handle_command(from,to,message) {
 	input = input.replace(/^[\s,:]+/,"").replace(/\s+$/,"");
 	
 	command_list.forEach(function(c) {
-		if (!handled && input.match(c.pattern)) {
-			handled = true;
-			
-			if (isfn(c.reply)) out = c.reply(from,to,message);
-			else out = c.reply[rand(c.reply.length)];
-		}
+		var m_command;
+		
+		if (handled) return;
+		
+		m_command = input.match(c.pattern);
+		
+		if (!m_command) return;
+		
+		handled = true;
+		
+		if (isfn(c.reply)) out = c.reply(from,to,message);
+		else out = c.reply[rand(c.reply.length)];
+		
+		send(to,from,out,m_command);
 	});
-	
-	if (handled) send(to,from,out);
 	
 	return handled;
 }
@@ -206,14 +216,16 @@ function handle_message(from, to, message) {
 	state.last_message = message;
 	
 	pattern_list.forEach(function(p) {
-		var out;
+		var m_message,out;
 		
-		if (!handled && message.match(p.pattern) && state.last_pattern != p.pattern) {
+		m_message = message.match(p.pattern);
+		
+		if (!handled && m_message && state.last_pattern != p.pattern) {
 			state.last_pattern = p.pattern;
 			
 			out = p.reply[rand(p.reply.length)];
 			
-			send(to,from,out);
+			send(to,from,out,m_message);
 			
 			handled = true;
 		}
