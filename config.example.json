@@ -1,0 +1,5 @@
+{
+	"channels" : ["#willybot"],
+	"name"     : "willy",
+	"server"   : "irc.freenode.net"
+}
