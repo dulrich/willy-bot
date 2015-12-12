@@ -9,6 +9,7 @@
 * configurable verbosity
 * random languages
 * version command
+* random relatives
 
 # 2015-12-10 -- 1.0.2
 * actually use config.json

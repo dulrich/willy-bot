@@ -57,6 +57,7 @@ function replace_tokens(str,from,m_match) {
 	
 	out = out.replace(/\?rand_lang\b/g,rand_el(lang_list));
 	out = out.replace(/\?rand_noun\b/g,rand_el(noun_list));
+	out = out.replace(/\?rand_person\b/g,rand_el(person_list));
 	
 	out = out.replace(/\?version\b/g,config.version);
 	
@@ -151,28 +152,41 @@ var command_list = [{
 	pattern : /.?/,
 	reply   : [
 		"do you even speak ?rand_lang?",
+		"/me hums a tune",
+		"/me humps ?from's ?rand_person",
 		"i am not the bot you are looking for",
+		"/me whistles",
 		"who, me?"
 	]
 }];
 
 var lang_list = [
 	"arabic",
+	
 	"chinese",
-	"english",
+	"danish","dutch",
+	"english","estonian",
 	"french",
-	"german",
+	"gaelic","german",
 	"hungarian",
-	"italian",
+	"irish","italian",
 	"japanese",
+	
 	"latin",
-	"mandarin",
+	"magyar","mandarin",
 	"norwegian",
+	"olde english",
 	"polish",
+	
 	"russian",
-	"thai",
+	"swedish",
+	"thai","turkish",
+	
 	"vietnamese",
-	"welsh"
+	"welsh",
+	
+	"yiddish"
+	
 ];
 
 var noun_list = [
@@ -189,13 +203,43 @@ var noun_list = [
 	" water bottle"
 ];
 
+var person_list = [
+	"aunt",
+	"brother",
+	"brother-in-law",
+	"boyfriend",
+	"cousin",
+	"dad",
+	"ex",
+	"father",
+	"father-in-law",
+	"girlfriend",
+	"grandfather",
+	"grandmother",
+	"great-aunt",
+	"great-uncle",
+	"lawyer",
+	"mom",
+	"mother",
+	"mother-in-law",
+	"nephew",
+	"niece",
+	"piano teacher",
+	"platonic life partner",
+	"significant other",
+	"spouse",
+	"uncle"
+];
+
 var repeat_list = [
 	"?from, do you know how to read?",
 	"?rand_lang. learn to read it",
-	"my grandmother is more creative than you",
+	"you should learn ?rand_lang. try asking your ?rand_person",
+	"my ?rand_person is more creative than you",
 	"same old, same old...",
 	"that sounds familiar",
-	"stfu somebody already said that"
+	"stfu somebody already said that",
+	"your ?rand_lang ?rand_person showed me that with a?rand_noun years ago"
 ];
 
 var pattern_list = [{
@@ -207,6 +251,12 @@ var pattern_list = [{
 },{
 	pattern : /panda/i,
 	reply   : ["Yay pandas!","I <3 pandas :D"]
+},{
+	pattern : /things?(\s+\w+)+\s+own/i,
+	reply   : ["the things you own, end up owning you"]
+},{
+	pattern : /stfu/i,
+	reply   : ["how about you stfu first","your ?rand_person stfu last night"]
 },{
 	pattern : /wikipedia/i,
 	reply   : ["All hail the Infallible Wikipedia!!!"]
