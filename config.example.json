@@ -1,5 +1,10 @@
 {
 	"channels" : ["#willybot"],
 	"name"     : "willy",
-	"server"   : "irc.freenode.net"
+	"server"   : "irc.freenode.net",
+	
+	"db_host"  : "localhost",
+	"db_name"  : "willy_bot",
+	"db_user"  : "wb_user",
+	"db_pass"  : "wb_pass"
 }

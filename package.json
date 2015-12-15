@@ -6,7 +6,8 @@
   "dependencies": {
     "irc": "^0.4.0",
     "lodash": "^3.10.1",
-    "moment": "^2.10.6"
+    "moment": "^2.10.6",
+    "mysql": "^2.9.0"
   },
   "devDependencies": {},
   "scripts": {

@@ -17,13 +17,15 @@
 var _ = require("lodash"),
 	irc = require("irc"),
 	log = console.log,
-	moment = require("moment");
+	moment = require("moment"),
+	mysql = require("mysql"),
+	util = require("util");
 
 var config = require("./config.json");
 
 config.regex_command = new RegExp("^"+config.name+"\\b","i");
 config.verbosity = config.verbosity || 1.0;
-config.version = "willy-bot-1.0.3";
+config.version = "willy-bot-1.1.0";
 
 function delay(fn,thisarg,args,millis) {
 	setTimeout(function() {
@@ -31,16 +33,20 @@ function delay(fn,thisarg,args,millis) {
 	},millis);
 }
 
+function int(n,b) {
+	return parseInt(n,b||10) | 0;
+}
+
 function isfn(f) {
 	return typeof f == "function";
 }
 
-function rand(max) {
-	return Math.floor(Math.random() * max);
+function rand(min,max) {
+	return min + Math.floor(Math.random() * (max - min));
 }
 
 function rand_el(list) {
-	return list[rand(list.length)];
+	return list[rand(0,list.length)];
 }
 
 function trace(msg) {
@@ -48,16 +54,54 @@ function trace(msg) {
 }
 
 function replace_tokens(str,from,m_match) {
-	var out;
+	var match,out,rx_int;
 	
 	out = str;
 	
 	out = out.replace(/\?from\b/g,from);
 	out = out.replace(/\?match\b/g,(m_match && m_match[0]) || "");
 	
-	out = out.replace(/\?rand_lang\b/g,rand_el(lang_list));
-	out = out.replace(/\?rand_noun\b/g,rand_el(noun_list));
-	out = out.replace(/\?rand_person\b/g,rand_el(person_list));
+	rx_int = /\?rand_int([\d_]+)?/i;
+	match = rx_int.exec(out) || [];
+	
+	var min,max;
+	for(var i = 1; i < match.length;i++) {
+		min = match[i].split("_")[0];
+		max = match[i].split("_")[1];
+		
+		if (!max) {
+			if (!min) min = 100;
+			
+			max = min;
+			min = 0;
+		}
+		
+		min = int(min);
+		max = int(max);
+		
+		out = out.replace(/\?rand_int([\d_]+)?/,rand(min,max));
+	}
+	
+	_.each(lists,function(list,name) {
+		var rx_indef,rx_plain;
+		var val;
+		
+		rx_indef = new RegExp("\\\?indef_"+name+"\\b","i");
+		rx_plain = new RegExp("\\\?rand_"+name+"\\b","i");
+		
+		while(out.match(rx_indef)) {
+			val = rand_el(list);
+			val = val.match(/^[aeiou]/)
+				? "an " + val
+				: "a " + val;
+			
+			out = out.replace(rx_indef,val);
+		}
+		
+		while(out.match(rx_plain)) {
+			out = out.replace(rx_plain,rand_el(list));
+		}
+	});
 	
 	out = out.replace(/\?version\b/g,config.version);
 	
@@ -106,7 +150,7 @@ var state = {
 var action_modifiers = [
 	"too",
 	"with ?from",
-	"with a?rand_noun",
+	"with ?indef_noun",
 	"better than ?from"
 ];
 
@@ -129,7 +173,7 @@ var command_list = [{
 	reply  : function(from,to,input) {
 		delay(process.exit,null,[],100);
 		
-		return "/me commits suicide with a?rand_noun";
+		return "/me commits suicide with ?indef_noun";
 	}
 },
 {
@@ -146,7 +190,37 @@ var command_list = [{
 },
 {
 	pattern : /(who are you|version)/i,
-	reply   : ["?version at your service","?version reporting for duty"]
+	reply   : [
+		"?version at your service",
+		"?version reporting for duty",
+		"?version build ?rand_int100000_200000"
+	]
+},
+{
+	pattern : /\bsudo\b/i,
+	reply   : ["?from is not in the sudoers file. This incident will be reported."]
+},
+{
+	pattern : /(tell|make)\s/i,
+	reply   : function(from,to,input) {
+		var match,out,rx;
+		
+		out = input;
+		rx = /^(tell|make)\s+(\w+)(.+)?/i;
+		
+		match = rx.exec(input);
+		
+		if (match && match[1] && match[2]) {
+			out = util.format(
+				"/me %ss %s%s",
+				match[1],
+				(match[2].match(/^me/i) ? "?from" : match[2]),
+				match[3] || ""
+			);
+		}
+		
+		return out;
+	}
 },
 {
 	pattern : /.?/,
@@ -160,76 +234,31 @@ var command_list = [{
 	]
 }];
 
-var lang_list = [
-	"arabic",
-	
-	"chinese",
-	"danish","dutch",
-	"english","estonian",
-	"french",
-	"gaelic","german",
-	"hungarian",
-	"irish","italian",
-	"japanese",
-	
-	"latin",
-	"magyar","mandarin",
-	"norwegian",
-	"olde english",
-	"polish",
-	
-	"russian",
-	"swedish",
-	"thai","turkish",
-	
-	"vietnamese",
-	"welsh",
-	
-	"yiddish"
-	
-];
+var db = mysql.createConnection({
+	host        : config.db_host,
+	database    : config.db_name,
+	user        : config.db_user,
+	password    : config.db_pass,
+	dateStrings : true
+});
 
-var noun_list = [
-	"n AK-47",
-	" boom stick",
-	" frying pan",
-	" glock 21",
-	" murse",
-	" large trout",
-	" pair of scissors",
-	" sockeye salmon",
-	" trout",
-	"n uzi",
-	" water bottle"
-];
+var lists = {};
 
-var person_list = [
-	"aunt",
-	"brother",
-	"brother-in-law",
-	"boyfriend",
-	"cousin",
-	"dad",
-	"ex",
-	"father",
-	"father-in-law",
-	"girlfriend",
-	"grandfather",
-	"grandmother",
-	"great-aunt",
-	"great-uncle",
-	"lawyer",
-	"mom",
-	"mother",
-	"mother-in-law",
-	"nephew",
-	"niece",
-	"piano teacher",
-	"platonic life partner",
-	"significant other",
-	"spouse",
-	"uncle"
-];
+var query_lists = "SELECT \
+		L.ListName, \
+		I.ItemText \
+	FROM wb_item I \
+	LEFT JOIN wb_list L ON I.ListID = L.ListID";
+
+db.query(query_lists,function(err,res) {
+	if (err) return log("ERROR: failed to load replacement lists",err);
+	
+	_.each(res,function(row) {
+		lists[row.ListName] = lists[row.ListName] || [];
+		
+		lists[row.ListName].push(row.ItemText);
+	});
+});
 
 var repeat_list = [
 	"?from, do you know how to read?",
@@ -239,7 +268,7 @@ var repeat_list = [
 	"same old, same old...",
 	"that sounds familiar",
 	"stfu somebody already said that",
-	"your ?rand_lang ?rand_person showed me that with a?rand_noun years ago"
+	"your ?rand_lang ?rand_person showed me that with ?indef_noun years ago"
 ];
 
 var pattern_list = [{
@@ -252,10 +281,20 @@ var pattern_list = [{
 	pattern : /panda/i,
 	reply   : ["Yay pandas!","I <3 pandas :D"]
 },{
+	pattern : /problems/i,
+	reply   : [
+		"?rand_group cause all of the world's problems",
+		"i've got ?rand_int100 problems but ?indef_person ain't one",
+		"i've got ?rand_int100 problems but ?rand_group aren't one anymore"
+	]
+},{
+	pattern : /monty\s+python/i,
+	reply   : ["your ?rand_person was ?indef_animal, and your ?rand_person smelt of ?rand_food"]
+},{
 	pattern : /things?(\s+\w+)+\s+own/i,
 	reply   : ["the things you own, end up owning you"]
 },{
-	pattern : /stfu/i,
+	pattern : /\bstfu\b/i,
 	reply   : ["how about you stfu first","your ?rand_person stfu last night"]
 },{
 	pattern : /wikipedia/i,
@@ -263,6 +302,9 @@ var pattern_list = [{
 },{
 	pattern : /fishing/i,
 	reply   : ["will you take me fishing, ?from?","/me goes fishing"]
+},{
+	pattern : /\bshopping\b/i,
+	reply   : ["buy whatever you want, it will never fill the existential void in your soul"]
 }];
 
 client.addListener('error', function(message) {
@@ -290,7 +332,7 @@ function handle_command(from,to,message) {
 		
 		handled = true;
 		
-		if (isfn(c.reply)) out = c.reply(from,to,message);
+		if (isfn(c.reply)) out = c.reply(from,to,input);
 		else out = rand_el(c.reply);
 		
 		send(to,from,out,m_command);
@@ -354,7 +396,7 @@ function handle_action(from,to,text,message) {
 	trace("handle_action");
 	log(from + ' => ' + to + ' action: ' + text);
 	
-	chance = rand(3);
+	chance = rand(0,3);
 	
 	if (chance == 1) return;
 	else if (chance == 2) return handle_message(from,to,text);
