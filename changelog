@@ -1,6 +1,5 @@
 # todo
 
-* store responses in db
 * get part of speech dictionary into db
 * implement op commands
 * xkcd references
@@ -11,6 +10,7 @@
 * command: help
 * command: match <mode> /<pattern>/ reply <reply>
 * store patterns in db
+* listadd now supports multiple items in one command, space-separated
 
 # 2015-12-15 -- 1.1.2
 * regularize listcmd syntax

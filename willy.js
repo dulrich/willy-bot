@@ -186,7 +186,7 @@ var help = {
 	listadd : {
 		use    : "add <item> to response list <list>",
 		syntax : "listadd <list> <item>",
-		notes  : ""
+		notes  : "* optionally multiple space-separated items"
 	},
 	listcreate : {
 		use    : "create new response list <list>",
@@ -239,7 +239,7 @@ var command_list = [{
 				return name;
 			}).sortBy().join(", ").value());
 		}
-		log(reply);
+		
 		_.chain(reply).flatten().each(function(line) {
 			send(to,from,line,input);
 		}).value();
@@ -377,32 +377,45 @@ var command_list = [{
 	reply   : ["?from, did you mean: " + help.match.syntax]
 },
 {
-	pattern : /^listadd \w+ (\w+|"[\w-_ ]+")$/i,
+	pattern : /^listadd \w+\s+\w+/i,
 	reply   : function(from,to,input) {
-		var item,list,query_item;
+		var items,list,query_item;
 		
 		list = input.split(" ")[1];
-		item = input.match(/(\w+|"[\w-_ ]+")$/i)[0].replace(/"/g,"");
 		
 		if (!lists[list]) {
 			return "sorry ?from, that's not a valid list";
 		}
 		
-		if (_.contains(lists[list],item)) {
-			return "?from: i already have that";
-		}
+		items = input.replace(/^listadd \w+\s+/i,"").match(/("[\w_-\s]+"|\w+)/g);
 		
-		query_item = "INSERT IGNORE INTO wb_item \
-			SET ItemText = " + db.escape(item) + ",\
-				ListID = (\
-				SELECT ListID FROM wb_list WHERE ListName = " + db.escape(list) + ")";
-		log(query_item);
-		db.query(query_item,function(err,res) {
-			if (err) return log("FAILED TO ADD ITEM: " + list + ", " + item,err);
+		if (!items || !items.length) return "uhhh... idk what happened";
+		
+		_.each(items,function(item) {
+			item = item.replace(/"/g,"").replace(/^\s+/,"").replace(/\s+$/,"");
 			
-			log("ADDED LIST ITEM: " + list + ", " + item);
-			lists[list].push(item);
+			if (_.contains(lists[list],item)) {
+				return "?from: i already have that";
+			}
+			
+			query_item = "INSERT IGNORE INTO wb_item \
+				SET ItemText = " + db.escape(item) + ",\
+					ListID = (\
+					SELECT ListID FROM wb_list WHERE ListName = " + db.escape(list) + ")";
+			
+			db.query(query_item,function(err,res) {
+				if (err) return log("FAILED TO ADD ITEM: " + list + ", " + item,err);
+				
+				log("ADDED LIST ITEM: " + list + ", " + item);
+				lists[list].push(item);
+			});
 		});
+		
+		item = input.match(/(\w+|"[\w-_ ]+")$/i)[0].replace(/"/g,"");
+		
+		
+		
+		
 		
 		return "ok ?from, i'll put it in";
 	}
