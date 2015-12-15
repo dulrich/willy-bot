@@ -7,6 +7,12 @@
 * random questions to names in channel
 * random jokes http://www.icndb.com/api/ http://api.icndb.com/jokes/random
 
+# 2015-12-15 -- 1.1.2
+* regularize listcmd syntax
+* fix rand_int handling
+* command: listshow
+* command: listshow <list>
+
 # 2015-12-14 -- 1.1.1
 * multi_group replacement
 * command: start list <list>

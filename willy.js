@@ -25,7 +25,7 @@ var config = require("./config.json");
 
 config.regex_command = new RegExp("^"+config.name+"\\b","i");
 config.verbosity = config.verbosity || 1.0;
-config.version = "willy-bot-1.1.1";
+config.version = "willy-bot-1.1.2";
 
 function delay(fn,thisarg,args,millis) {
 	setTimeout(function() {
@@ -33,8 +33,16 @@ function delay(fn,thisarg,args,millis) {
 	},millis);
 }
 
+function ifdef(v,a,b) {
+	return isdef(v) ? a : b;
+}
+
 function int(n,b) {
 	return parseInt(n,b||10) | 0;
+}
+
+function isdef(v) {
+	return v !== null && typeof v !== "undefined";
 }
 
 function isfn(f) {
@@ -47,6 +55,10 @@ function rand(min,max) {
 
 function rand_el(list) {
 	return list[rand(0,list.length)];
+}
+
+function string(s) {
+	return ifdef(s,""+s,"");
 }
 
 function trace(msg) {
@@ -66,8 +78,8 @@ function replace_tokens(str,from,m_match) {
 	
 	var min,max;
 	for(var i = 1; i < match.length;i++) {
-		min = match[i].split("_")[0];
-		max = match[i].split("_")[1];
+		min = string(match[i]).split("_")[0];
+		max = string(match[i]).split("_")[1];
 		
 		if (!max) {
 			if (!min) min = 100;
@@ -200,11 +212,39 @@ var command_list = [{
 	}
 },
 {
-	pattern : /^start list \w+$/i,
+	pattern : /^listshow$/i,
+	reply   : function(from,to,input) {
+		var out;
+		
+		out = _.map(lists,function(list,name) {
+			return util.format("%s: %d",name,list.length);
+		}).join(", ");
+		
+		return out;
+	}
+},
+{
+	pattern : /^listshow \w+$/i,
+	reply   : function(from,to,input) {
+		var list,out;
+		
+		list = input.split(" ")[1];
+		
+		if (!lists[list]) return "?from: that's not a valid list";
+		
+		out = _.map(lists[list],function(item) {
+			return util.format("%s",item);
+		}).join(", ");
+		
+		return out;
+	}
+},
+{
+	pattern : /^listcreate \w+$/i,
 	reply   : function(from,to,input) {
 		var list,query_list;
 		
-		list = input.split(" ")[2];
+		list = input.split(" ")[1];
 		
 		if (lists[list]) {
 			return "?from: that list already exists; do i look like your ?rand_person?";
@@ -224,12 +264,12 @@ var command_list = [{
 	}
 },
 {
-	pattern : /^listadd \w+ \w+$/i,
+	pattern : /^listadd \w+ (\w+|"[\w-_ ]+")$/i,
 	reply   : function(from,to,input) {
 		var item,list,query_item;
 		
 		list = input.split(" ")[1];
-		item = input.split(" ")[2];
+		item = input.match(/(\w+|"[\w-_ ]+")$/i)[0].replace(/"/g,"");
 		
 		if (!lists[list]) {
 			return "sorry ?from, that's not a valid list";
@@ -259,7 +299,7 @@ var command_list = [{
 	reply   : [
 		"?version at your service",
 		"?version reporting for duty",
-		"?version build ?rand_int100000_200000"
+		"?version build ?rand_int100000_600000"
 	]
 },
 {
@@ -314,7 +354,9 @@ var query_lists = "SELECT \
 		L.ListName, \
 		I.ItemText \
 	FROM wb_item I \
-	LEFT JOIN wb_list L ON I.ListID = L.ListID";
+	LEFT JOIN wb_list L ON I.ListID = L.ListID \
+	WHERE NOT I._deleted \
+		AND NOT L._deleted";
 
 db.query(query_lists,function(err,res) {
 	if (err) return log("ERROR: failed to load replacement lists",err);
@@ -344,14 +386,20 @@ var pattern_list = [{
 	pattern : /(hitler|nazis?)/i,
 	reply   : ["you say ?match? by Godwin's law I say... YOU LOSE!"]
 },{
+	pattern : /number/i,
+	reply   : ["my favorite number is ?rand_int1_101"]
+},{
+	pattern : /random/i,
+	reply   : ["you know what's random? ?rand_int337_1117"]
+},{
 	pattern : /panda/i,
 	reply   : ["Yay pandas!","I <3 pandas :D"]
 },{
 	pattern : /problems/i,
 	reply   : [
 		"?rand_group cause all of the world's problems",
-		"i've got ?rand_int100 problems but ?indef_person ain't one",
-		"i've got ?rand_int100 problems but ?rand_group aren't one anymore"
+		"i've got ?rand_int problems but ?indef_person ain't one",
+		"i've got ?rand_int problems but ?rand_group aren't one anymore"
 	]
 },{
 	pattern : /monty\s+python/i,
@@ -387,7 +435,7 @@ function handle_command(from,to,message) {
 	// trim leading 
 	input = input.replace(/^[\s,:]+/,"").replace(/\s+$/,"");
 	
-	command_list.forEach(function(c) {
+	_.each(command_list,function(c) {
 		var m_command;
 		
 		if (handled) return;
@@ -435,7 +483,7 @@ function handle_message(from, to, message) {
 	
 	state.last_message = message;
 	
-	pattern_list.forEach(function(p) {
+	_.each(pattern_list,function(p) {
 		var m_message,out;
 		
 		m_message = message.match(p.pattern);
