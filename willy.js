@@ -25,7 +25,7 @@ var config = require("./config.json");
 
 config.regex_command = new RegExp("^"+config.name+"\\b","i");
 config.verbosity = config.verbosity || 1.0;
-config.version = "willy-bot-1.1.2";
+config.version = "willy-bot-1.1.3";
 
 function delay(fn,thisarg,args,millis) {
 	setTimeout(function() {
@@ -177,7 +177,76 @@ var action_modifiers = [
 	"better than ?from"
 ];
 
+var help = {
+	help : {
+		use    : "find commands, or get help with <cmd>. you need it.",
+		syntax : "help | help <cmd>",
+		notes  : ""
+	},
+	listadd : {
+		use    : "add <item> to response list <list>",
+		syntax : "listadd <list> <item>",
+		notes  : ""
+	},
+	listcreate : {
+		use    : "create new response list <list>",
+		syntax : "listcreate <list>",
+		notes  : "* list is normally singular, 'animal' not 'animals'"
+	},
+	listshow  : {
+		use    : "display existing lists with item counts, or display the items in <list>",
+		syntax : "listshow | listshow <list>",
+		notes  : ""
+	},
+	match : {
+		use    : "create a new <reply> to <pattern>",
+		syntax : "match <mode> /<pattern>/ reply <reply>",
+		notes  : [
+			"* mode is word or phrase, word matches whole words only",
+			"* pattern is a regular express, use \\ for character classes, etc",
+			"* reply is the rest of the message; use ?rand_<list> for more fun"
+		]
+	}
+};
+
 var command_list = [{
+	pattern : /^help(\s+\w+)?$/i,
+	reply   : function(from,to,input) {
+		var match,name,reply,rx_match;
+		
+		rx_match = /^help\s+(\w+)?$/i;
+		match = rx_match.exec(input);
+		
+		name = string(match && match[1]);
+		
+		reply = [];
+		
+		if (name) {
+			if (!help[name]) {
+				reply.push("?from,do you know how to type? " + name + " isn't a command");
+			}
+			else {
+				reply.push(name + ": " + help[name].use);
+				reply.push(name + " syntax:");
+				reply.push(help[name].syntax);
+				
+				if (help[name].notes) reply.push(help[name].notes);
+			}
+		}
+		else {
+			reply.push("AVAILABLE COMMANDS:");
+			reply.push(_.chain(help).map(function(item,name) {
+				return name;
+			}).sortBy().join(", ").value());
+		}
+		log(reply);
+		_.chain(reply).flatten().each(function(line) {
+			send(to,from,line,input);
+		}).value();
+		
+		return "if that doesn't help you, then nothing can";
+	}
+},{
 	pattern : /(get out|leave)/i,
 	reply  : function(from,to,input) {
 		var partings = [
@@ -262,6 +331,50 @@ var command_list = [{
 		
 		return "?from: i'm on it";
 	}
+},
+{
+	pattern : /^match (word|phrase) \/.+\/ reply .+$/i,
+	reply   : function(from,to,input) {
+		var match,mode,pattern,query_pattern,reply,rx_match;
+		
+		rx_match = /^match (word|phrase) \/(.+)\/ reply (.+)$/i;
+		
+		match = rx_match.exec(input);
+		
+		if (!match || !match[1] || !match[2] || !match[3]) {
+			return "sorry ?from, your pattern is invalid";
+		}
+		
+		mode    = match[1];
+		pattern = match[2];
+		reply   = match[3];
+		
+		if (
+			pattern_map[pattern]
+			&& _.contains(pattern_list[pattern_map[pattern]].reply)
+		) {
+			return "?from: i already match that " + mode;
+		}
+		
+		query_pattern = "INSERT IGNORE INTO wb_pattern \
+			SET PatternMode = " + db.escape(mode) +", \
+				PatternRegExp = " + db.escape(pattern) + ", \
+				PatternReply = " + db.escape(reply) + ", \
+				PatternNick = " + db.escape(from);
+		
+		db.query(query_pattern,function(err,res) {
+			if (err) return log("FAILED TO START LIST :" + list,err);
+			
+			log("ADDED PATTERN: " + pattern);
+			create_pattern(pattern,mode,reply,from)
+		});
+		
+		return "?from: got it";
+	}
+},
+{
+	pattern : /^match/i,
+	reply   : ["?from, did you mean: " + help.match.syntax]
 },
 {
 	pattern : /^listadd \w+ (\w+|"[\w-_ ]+")$/i,
@@ -368,6 +481,44 @@ db.query(query_lists,function(err,res) {
 	});
 });
 
+var query_patterns = "SELECT \
+		P.* \
+	FROM wb_pattern P \
+	WHERE NOT P._deleted \
+	ORDER BY P.PatternPriority DESC,P.PatternRegExp,P.PatternReply";
+var pattern_list,pattern_map;
+
+pattern_list = [];
+pattern_map = {};
+
+function create_pattern(pattern,mode,reply,nick) {
+	var index;
+	
+	pattern_map[pattern] = pattern_map[pattern] || pattern_list.length;
+	
+	index = pattern_map[pattern];
+	
+	pattern_list[index] = pattern_list[index] || {
+		pattern : mode ==  "word"
+			? new RegExp("\\b"+pattern+"\\b","i")
+			: new RegExp(pattern,"i"),
+		reply   : [],
+		nick    : nick
+	};
+	
+	pattern_list[index].reply.push(reply);
+}
+
+db.query(query_patterns,function(err,res) {
+	if (err) return log("ERROR: failed to load patterns",err);
+	
+	_.each(res,function(row) {
+		create_pattern(row.PatternRegExp,row.PatternMode,row.PatternReply,row.PatternNick);
+	});
+	
+	log(pattern_list);
+});
+
 var repeat_list = [
 	"?from, do you know how to read?",
 	"?rand_lang. learn to read it",
@@ -378,48 +529,6 @@ var repeat_list = [
 	"stfu somebody already said that",
 	"your ?rand_lang ?rand_person showed me that with ?indef_noun years ago"
 ];
-
-var pattern_list = [{
-	pattern : /goat/i,
-	reply   : ["goats. Goats! GOATS!!!","1 goat, 2 goat, red goat, blue goat"]
-},{
-	pattern : /(hitler|nazis?)/i,
-	reply   : ["you say ?match? by Godwin's law I say... YOU LOSE!"]
-},{
-	pattern : /number/i,
-	reply   : ["my favorite number is ?rand_int1_101"]
-},{
-	pattern : /random/i,
-	reply   : ["you know what's random? ?rand_int337_1117"]
-},{
-	pattern : /panda/i,
-	reply   : ["Yay pandas!","I <3 pandas :D"]
-},{
-	pattern : /problems/i,
-	reply   : [
-		"?rand_group cause all of the world's problems",
-		"i've got ?rand_int problems but ?indef_person ain't one",
-		"i've got ?rand_int problems but ?rand_group aren't one anymore"
-	]
-},{
-	pattern : /monty\s+python/i,
-	reply   : ["your ?rand_person was ?indef_animal, and your ?rand_person smelt of ?multi_food"]
-},{
-	pattern : /things?(\s+\w+)+\s+own/i,
-	reply   : ["the things you own, end up owning you"]
-},{
-	pattern : /\bstfu\b/i,
-	reply   : ["how about you stfu first","your ?rand_person stfu last night"]
-},{
-	pattern : /wikipedia/i,
-	reply   : ["All hail the Infallible Wikipedia!!!"]
-},{
-	pattern : /fishing/i,
-	reply   : ["will you take me fishing, ?from?","/me goes fishing"]
-},{
-	pattern : /\bshopping\b/i,
-	reply   : ["buy whatever you want, it will never fill the existential void in your soul"]
-}];
 
 client.addListener('error', function(message) {
 	log('error: ', message);
@@ -432,6 +541,7 @@ function handle_command(from,to,message) {
 	
 	// strip out the bot name for commands in a channel
 	input = message.replace(config.regex_command,"");
+	
 	// trim leading 
 	input = input.replace(/^[\s,:]+/,"").replace(/\s+$/,"");
 	
@@ -471,6 +581,8 @@ function handle_message(from, to, message) {
 	trace("handle_message");
 	log(from + ' => ' + to + ': ' + message);
 	
+	if (to == config.name) to = from;
+	
 	if (message == state.last_message) return handle_repeat(from,to,message);
 	
 	if (message.match(config.regex_command)) {
@@ -500,9 +612,6 @@ function handle_message(from, to, message) {
 	});
 }
 client.addListener("message",handle_message);
-client.addListener("pm",function(from,message) {
-	handle_message(from,from,message);
-});
 
 function handle_action(from,to,text,message) {
 	var action_modifier,chance;

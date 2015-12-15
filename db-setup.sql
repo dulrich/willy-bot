@@ -2,6 +2,38 @@ CREATE DATABASE IF NOT EXISTS willy_bot;
 
 USE willy_bot;
 
+CREATE TABLE IF NOT EXISTS wb_pattern (
+	PatternID INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+	PatternMode ENUM ('phrase','word') NOT NULL DEFAULT 'phrase',
+	PatternRegExp VARCHAR(100) NOT NULL DEFAULT '*',
+	PatternReply VARCHAR(500) NOT NULL DEFAULT 'nothing',
+	PatternPriority TINYINT NOT NULL DEFAULT 1,
+	PatternNick VARCHAR(100) NOT NULL DEFAULT '',
+	PatternDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	_deleted TINYINT NOT NULL DEFAULT 0,
+	UNIQUE(PatternRegExp,PatternReply)
+) engine=InnoDB;
+
+INSERT IGNORE INTO wb_pattern(PatternMode,PatternRegExp,PatternReply,PatternNick) VALUES
+	('Word','goats?','goats. Goats! GOATS!!!','avid'),
+	('Word','goats?','1 goat, 2 goat, red goat, blue goat','avid'),
+	('Word','(hitler|nazis?)','you say ?match? by Godwin''s law I say... YOU LOSE!','avid'),
+	('Word','numbers?','my favorite number is ?rand_int1_101','avid'),
+	('Word','random','you know what''s random? ?rand_int337_1117','avid'),
+	('Word','pandas?','Yay pandas!','avid'),
+	('Word','pandas?','I <3 pandas :D','avid'),
+	('Word','problems?','?rand_group cause all of the world''s problems','avid'),
+	('Word','problems?','i''ve got ?rand_int problems but ?indef_person ain''t one','avid'),
+	('Word','problems?','i''ve got ?rand_int problems but ?rand_group aren''t one anymore','avid'),
+	('Phrase','monty\\s+python','your ?rand_person was ?indef_animal, and your ?rand_person smelt of ?multi_food','avid'),
+	('Phrase','things?(\\s+\\w+)+\\s+own','the things you own, end up owning you','avid'),
+	('Word','stfu','how about you stfu first','avid'),
+	('Word','stfu','your ?rand_person stfu last night','avid'),
+	('Word','wikipedia','All hail the Infallible Wikipedia!!!','avid'),
+	('Word','fishing','will you take me fishing, ?from?','avid'),
+	('Word','fishing','/me goes fishing','avid'),
+	('Word','shopping','buy whatever you want, it will never fill the existential void in your soul','avid');
+
 CREATE TABLE IF NOT EXISTS wb_list (
 	ListID INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
 	ListName VARCHAR(8) NOT NULL DEFAULT '',
