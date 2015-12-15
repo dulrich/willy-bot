@@ -25,7 +25,7 @@ var config = require("./config.json");
 
 config.regex_command = new RegExp("^"+config.name+"\\b","i");
 config.verbosity = config.verbosity || 1.0;
-config.version = "willy-bot-1.1.0";
+config.version = "willy-bot-1.1.1";
 
 function delay(fn,thisarg,args,millis) {
 	setTimeout(function() {
@@ -83,10 +83,11 @@ function replace_tokens(str,from,m_match) {
 	}
 	
 	_.each(lists,function(list,name) {
-		var rx_indef,rx_plain;
+		var rx_indef,rx_multi,rx_plain;
 		var val;
 		
 		rx_indef = new RegExp("\\\?indef_"+name+"\\b","i");
+		rx_multi = new RegExp("\\\?multi_"+name+"\\b","i");
 		rx_plain = new RegExp("\\\?rand_"+name+"\\b","i");
 		
 		while(out.match(rx_indef)) {
@@ -96,6 +97,16 @@ function replace_tokens(str,from,m_match) {
 				: "a " + val;
 			
 			out = out.replace(rx_indef,val);
+		}
+		
+		while(out.match(rx_multi)) {
+			val = rand_el(list);
+			
+			val = val.replace(/y$/i,"ies");
+			val = val.replace(/sh$/i,"shes");
+			val = val.replace(/([^s])$/i,"$1s");
+			
+			out = out.replace(rx_multi,val);
 		}
 		
 		while(out.match(rx_plain)) {
@@ -186,6 +197,61 @@ var command_list = [{
 		];
 		
 		return rand_el(times);
+	}
+},
+{
+	pattern : /^start list \w+$/i,
+	reply   : function(from,to,input) {
+		var list,query_list;
+		
+		list = input.split(" ")[2];
+		
+		if (lists[list]) {
+			return "?from: that list already exists; do i look like your ?rand_person?";
+		}
+		
+		query_list = "INSERT IGNORE INTO wb_list \
+			SET ListName = " + db.escape(list);
+		
+		db.query(query_list,function(err,res) {
+			if (err) return log("FAILED TO START LIST :" + list,err);
+			
+			log("STARTED LIST: " + list);
+			lists[list] = [];
+		});
+		
+		return "?from: i'm on it";
+	}
+},
+{
+	pattern : /^listadd \w+ \w+$/i,
+	reply   : function(from,to,input) {
+		var item,list,query_item;
+		
+		list = input.split(" ")[1];
+		item = input.split(" ")[2];
+		
+		if (!lists[list]) {
+			return "sorry ?from, that's not a valid list";
+		}
+		
+		if (_.contains(lists[list],item)) {
+			return "?from: i already have that";
+		}
+		
+		query_item = "INSERT IGNORE INTO wb_item \
+			SET ItemText = " + db.escape(item) + ",\
+				ListID = (\
+				SELECT ListID FROM wb_list WHERE ListName = " + db.escape(list) + ")";
+		log(query_item);
+		db.query(query_item,function(err,res) {
+			if (err) return log("FAILED TO ADD ITEM: " + list + ", " + item,err);
+			
+			log("ADDED LIST ITEM: " + list + ", " + item);
+			lists[list].push(item);
+		});
+		
+		return "ok ?from, i'll put it in";
 	}
 },
 {
@@ -289,7 +355,7 @@ var pattern_list = [{
 	]
 },{
 	pattern : /monty\s+python/i,
-	reply   : ["your ?rand_person was ?indef_animal, and your ?rand_person smelt of ?rand_food"]
+	reply   : ["your ?rand_person was ?indef_animal, and your ?rand_person smelt of ?multi_food"]
 },{
 	pattern : /things?(\s+\w+)+\s+own/i,
 	reply   : ["the things you own, end up owning you"]
