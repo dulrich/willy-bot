@@ -25,12 +25,28 @@ var config = require("./config.json");
 
 config.regex_command = new RegExp("^"+config.name+"\\b","i");
 config.verbosity = config.verbosity || 1.0;
-config.version = "willy-bot-1.1.3";
+config.version = "willy-bot-1.1.4";
+
+function bool(b) {
+	return (b === "false") ? false : Boolean(b);
+}
 
 function delay(fn,thisarg,args,millis) {
 	setTimeout(function() {
 		fn.apply(thisarg,args);
 	},millis);
+}
+
+function escape(db,p,sub) {
+	sub = bool(sub);
+	
+	if (isarray(p)) {
+		return (sub && "(") + p.forEach(function(v) {
+			return escape(db,v,true);
+		}).join(",") + (sub && ")");
+	}
+	log("escape",p,db.escape(p));
+	return db.escape(p);
 }
 
 function ifdef(v,a,b) {
@@ -41,12 +57,20 @@ function int(n,b) {
 	return parseInt(n,b||10) | 0;
 }
 
+function isarray(a) {
+	return a instanceof Array;
+}
+
 function isdef(v) {
 	return v !== null && typeof v !== "undefined";
 }
 
 function isfn(f) {
-	return typeof f == "function";
+	return typeof f === "function";
+}
+
+function isobj(o) {
+	return typeof o === "object";
 }
 
 function rand(min,max) {
@@ -63,6 +87,59 @@ function string(s) {
 
 function trace(msg) {
 	log("TRACE: " + msg);
+}
+
+function U() {
+	return util.format.apply(util,arguments);
+}
+
+function query(db,q,cb) {
+	var exited,match,out,query_o,rx_match;
+	
+	exited = false;
+	
+	if (!db) {
+		return cb("query: missing or falsey required arg 'db'",null);
+	}
+	
+	query_o = isobj(q)
+		? q
+		: {
+			ignore : false,
+			query  : q,
+			param  : {}
+		};
+	
+	query_o.ignore = bool(query_o.ignore);
+	query_o.query = string(query_o.query);
+	query_o.param = query_o.param || {};
+	
+	if (!isobj(query_o.param)) {
+		return cb("query: invalid q.param, must be an object",null);
+	}
+	
+	rx_match = /\?\w+\b/gi;
+	
+	out = query_o.query.replace(rx_match,function(match,pos,str) {
+		var param_s;
+		
+		if (exited) return "";
+		
+		param_s = match.substr(1);
+		
+		if (!query_o.param[param_s] && !query_o.ignore) {
+			exited = true;
+			
+			cb("query: unatched template variable " + match[0],null);
+			return "";
+		}
+		
+		return escape(db,query_o.param[param_s],false);
+	});
+	
+	// log("RUNNING QUERY:",query_o.query,out);
+	
+	db.query(out,cb);
 }
 
 function replace_tokens(str,from,m_match) {
@@ -184,8 +261,8 @@ var help = {
 		notes  : ""
 	},
 	listadd : {
-		use    : "add <item> to response list <list>",
-		syntax : "listadd <list> <item>",
+		use    : "add <item>+ to response list <list>",
+		syntax : "listadd <list> <item>+",
 		notes  : "* optionally multiple space-separated items"
 	},
 	listcreate : {
@@ -206,6 +283,11 @@ var help = {
 			"* pattern is a regular express, use \\ for character classes, etc",
 			"* reply is the rest of the message; use ?rand_<list> for more fun"
 		]
+	},
+	search : {
+		use    : "look for patterns like <term>",
+		syntax : "search <term>+",
+		notes  : ""
 	}
 };
 
@@ -226,9 +308,8 @@ var command_list = [{
 				reply.push("?from,do you know how to type? " + name + " isn't a command");
 			}
 			else {
-				reply.push(name + ": " + help[name].use);
-				reply.push(name + " syntax:");
-				reply.push(help[name].syntax);
+				reply.push(U("%s: %s",name,help[name].use));
+				reply.push(U("%s syntax: %s",name,help[name].syntax));
 				
 				if (help[name].notes) reply.push(help[name].notes);
 			}
@@ -286,7 +367,7 @@ var command_list = [{
 		var out;
 		
 		out = _.map(lists,function(list,name) {
-			return util.format("%s: %d",name,list.length);
+			return U("%s: %d",name,list.length);
 		}).join(", ");
 		
 		return out;
@@ -302,7 +383,7 @@ var command_list = [{
 		if (!lists[list]) return "?from: that's not a valid list";
 		
 		out = _.map(lists[list],function(item) {
-			return util.format("%s",item);
+			return U("%s",item);
 		}).join(", ");
 		
 		return out;
@@ -421,6 +502,43 @@ var command_list = [{
 	}
 },
 {
+	pattern : /^search\s+.+/i,
+	reply   : function(from,to,input) {
+		var param,query_search,term,terms;
+		
+		term = input.replace(/^search\s+/i,"");
+		terms = term.split(/ _-/);
+		
+		query_search = "SELECT * FROM wb_pattern WHERE 0 ";
+		
+		param = {};
+		_.each(terms,function(t,i) {
+			query_search += " OR PatternRegExp LIKE ?term_"+i;
+			query_search += " OR PatternReply LIKE ?term_"+i;
+			param["term_" + i] = "%"+t+"%";
+		});
+		
+		query(db,{
+			query : query_search,
+			param : param
+		},function(err,res) {
+			if (err) return log("FAILED SEARCH: " + term,err);
+			
+			send(to,from,U("found %d patterns for %s",res.length,term),input);
+			_.each(res,function(row) {
+				send(
+					to,
+					from,
+					U("%s: /%s/ reply %s",row.PatternNick,row.PatternRegExp,row.PatternReply),
+					input
+				);
+			});
+		});
+		
+		return U("looking into %s for you",term);
+	}
+},
+{
 	pattern : /(who are you|version)/i,
 	reply   : [
 		"?version at your service",
@@ -443,7 +561,7 @@ var command_list = [{
 		match = rx.exec(input);
 		
 		if (match && match[1] && match[2]) {
-			out = util.format(
+			out = U(
 				"/me %ss %s%s",
 				match[1],
 				(match[2].match(/^me/i) ? "?from" : match[2]),
@@ -528,8 +646,6 @@ db.query(query_patterns,function(err,res) {
 	_.each(res,function(row) {
 		create_pattern(row.PatternRegExp,row.PatternMode,row.PatternReply,row.PatternNick);
 	});
-	
-	log(pattern_list);
 });
 
 var repeat_list = [
