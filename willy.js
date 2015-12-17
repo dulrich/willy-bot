@@ -154,6 +154,8 @@ function replace_tokens(str,from,m_match) {
 	out = out.replace(/\?from\b/g,from);
 	out = out.replace(/\?match\b/g,(m_match && m_match[0]) || "");
 	
+	out = out.replace(/\?rand_nick\b/g,rand_el(nick_list));
+	
 	rx_int = /\?rand_int([\d_]+)?/i;
 	match = rx_int.exec(out) || [];
 	
@@ -872,5 +874,68 @@ function handle_action(from,to,text,message) {
 	send(to,from,text + " " + action_modifier,"","builtin: action handler");
 }
 client.addListener("action",handle_action);
+
+var nick_list = [];
+
+function nick_strip(nick) {
+	return string(nick).replace(/[^\w]/,"");
+}
+
+function nick_add(nick) {
+	nick = nick_strip(nick);
+	
+	if (!nick) return;
+	
+	nick_list.push(nick);
+	
+	nick_list = _.uniq(nick_list);
+}
+
+function nick_remove(nick) {
+	nick_list = _.without(nick_list,nick_strip(nick));
+}
+
+function handle_names(channel,nicks) {
+	if (config.channels.indexOf(channel) !== 0) return;
+	
+	_.each(nicks,function(powers,nick) {
+		return nick_add(nick);
+	});
+}
+client.addListener("names",handle_names);
+
+function handle_join(channel,nick,message) {
+	if (config.channels.indexOf(channel) !== 0) return;
+	
+	// if (nick == config.name) client.send("names",config.channels[0]);
+	
+	nick_add(nick);
+}
+client.addListener("join",handle_join);
+
+function handle_part(channel,nick,reason,message) {
+	if (config.channels.indexOf(channel) !== 0) return;
+	
+	nick_remove(nick);
+}
+client.addListener("part",handle_part);
+
+function handle_quit(nick,reason,channels,message) {
+	nick_remove(nick);
+}
+client.addListener("part",handle_quit);
+
+function handle_kick(channel,nick,by,reason,message) {
+	if (config.channels.indexOf(channel) !== 0) return;
+	
+	nick_remove(nick);
+}
+client.addListener("kick",handle_kick);
+
+function handle_nick(nickold,nicknew,channels,message) {
+	nick_remove(nickold);
+	nick_add(nicknew);
+}
+client.addListener("nick",handle_nick);
 
 log(config.name + " up.");
