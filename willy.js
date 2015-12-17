@@ -45,7 +45,7 @@ function escape(db,p,sub) {
 			return escape(db,v,true);
 		}).join(",") + (sub && ")");
 	}
-	log("escape",p,db.escape(p));
+	
 	return db.escape(p);
 }
 
@@ -372,7 +372,7 @@ var command_list = [{
 	reply  : function(from,to,input) {
 		var partings = [
 			"ok ?from, i'm out",
-			"/me flees",
+			"/me ?rand_action",
 			"/me hits the road"
 		];
 		
@@ -390,7 +390,7 @@ var command_list = [{
 	}
 },
 {
-	pattern : /(got the time\??|what time is it\??)/i,
+	pattern : /^(time|got the time\??|what time is it\??)/i,
 	reply   : function(from,to,input) {
 		var times = [
 			"?from: it's " + moment().format("llll") + " here",
@@ -453,7 +453,7 @@ var command_list = [{
 			lists[list] = [];
 		});
 		
-		return "?from: i'm on it";
+		return "?from: ?rand_assent";
 	}
 },
 {
@@ -494,7 +494,7 @@ var command_list = [{
 			create_pattern(pattern,mode,reply,from)
 		});
 		
-		return "?from: got it";
+		return "?from: ?rand_assent";
 	}
 },
 {
@@ -504,7 +504,7 @@ var command_list = [{
 },
 {
 	trigger : U("command: %s.",help.listadd.syntax),
-	pattern : /^listadd \w+\s+\w+/i,
+	pattern : /^listadd \w+\s+[^"]+/i,
 	reply   : function(from,to,input) {
 		var items,list,query_item;
 		
@@ -514,7 +514,7 @@ var command_list = [{
 			return "sorry ?from, that's not a valid list";
 		}
 		
-		items = input.replace(/^listadd \w+\s+/i,"").match(/("[\w_-\s]+"|\w+)/g);
+		items = input.replace(/^listadd \w+\s+/i,"").match(/("[^"]+"|\w+)/g);
 		
 		if (!items || !items.length) return "uhhh... idk what happened";
 		
@@ -544,7 +544,7 @@ var command_list = [{
 		
 		
 		
-		return "ok ?from, i'll put it in";
+		return "ok ?from, ?rand_assent";
 	}
 },
 {
@@ -619,8 +619,8 @@ var command_list = [{
 			return "the inception has begun";
 		}
 		
-		if (isstring(last.trigger)) {
-			return U("that was %s",last.trigger);
+		if (isstring(last.trigger) || last.trigger.builtin) {
+			return U("that was %s",last.trigger.trigger);
 		}
 		
 		return U("that was %s: /%s/ reply %s",
@@ -658,12 +658,18 @@ var command_list = [{
 {
 	pattern : /.?/,
 	reply   : [
+		"would you like to learn about ?multi_animal?",
+		"would you like to learn about ?multi_food?",
 		"do you even speak ?rand_lang?",
+		"how about i teach you ?rand_lang",
+		"how about you go ?rand_action instead",
 		"/me hums a tune",
 		"/me humps ?from's ?rand_person",
 		"i am not the bot you are looking for",
-		"/me whistles",
-		"who, me?"
+		"/me ?multi_action",
+		"who, me?",
+		"do you even have a ?rand_bodypart?",
+		"i've got nothing left to do but ?rand_action"
 	]
 }];
 
@@ -686,12 +692,32 @@ var query_lists = "SELECT \
 		AND NOT L._deleted";
 
 db.query(query_lists,function(err,res) {
+	var list_pattern;
+	
 	if (err) return log("ERROR: failed to load replacement lists",err);
 	
 	_.each(res,function(row) {
 		lists[row.ListName] = lists[row.ListName] || [];
 		
 		lists[row.ListName].push(row.ItemText);
+	});
+	
+	list_pattern = _.map(lists,function(list,name) {
+		return name;
+	}).join("|");
+	
+	pattern_list.push({
+		trigger : "builtin: <list name> reply <list item>",
+		builtin : true,
+		pattern : new RegExp("("+list_pattern+")","i"),
+		reply   : [
+			"actually, ?rand_?match",
+			"?match, you mean like ?rand_?match...?",
+			"?rand_?match!!!",
+			"?multi_?match!!!",
+			"uhh, maybe ?rand_?match?",
+			"uhh, maybe ?multi_?match?"
+		]
 	});
 });
 
