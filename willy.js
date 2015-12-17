@@ -73,6 +73,10 @@ function isobj(o) {
 	return typeof o === "object";
 }
 
+function isstring(s) {
+	return typeof s === "string";
+}
+
 function rand(min,max) {
 	return min + Math.floor(Math.random() * (max - min));
 }
@@ -208,22 +212,41 @@ function replace_tokens(str,from,m_match) {
 	return out;
 }
 
-function send(to,from,message,m_match) {
-	message = replace_tokens(message,from,m_match);
+function send_raw(to,from,message,m_match,raw,trigger) {
+	var out;
+	
+	out = message;
+	
+	if (!raw) {
+		out = replace_tokens(out,from,m_match);
+	}
 	
 	if (Math.random() > config.verbosity) {
 		log("VERBOSITY LIMITED");
 		return;
 	}
 	
-	if (message.match(/^\/me\s+/)) {
-		client.action(to,message.replace(/^\/me\s+/,""));
+	if (out.match(/^\/me\s+/)) {
+		client.action(to,out.replace(/^\/me\s+/,""));
 	}
 	else {
-		client.say(to,message);
+		client.say(to,out);
 	}
 	
-	log("ISAID: " + message);
+	log("ISAID: " + out);
+	
+	message_log.push({
+		to      : to,
+		from    : from,
+		message : message,
+		real    : out,
+		raw     : raw,
+		trigger : trigger
+	});
+}
+
+function send(to,from,message,m_match,trigger) {
+	send_raw(to,from,message,m_match,false,trigger);
 }
 
 var client = new irc.Client(config.server,config.name,{
@@ -239,6 +262,8 @@ var client = new irc.Client(config.server,config.name,{
 	realName : config.realName || "unknown",
 	userName : config.userName || "unknown"
 });
+
+var message_log = [];
 
 var state = {
 	last_action  : "",
@@ -288,10 +313,24 @@ var help = {
 		use    : "look for patterns like <term>",
 		syntax : "search <term>+",
 		notes  : ""
+	},
+	version : {
+		use    : "get version info for ?version",
+		syntax : "version",
+		notes  : ""
 	}
 };
 
+var secret_list = [
+	"Access Denied",
+	"401 Unauthorized",
+	"403 Forbidden",
+	"sorry, that is not permitted",
+	"?from is not in the sudoers file. This incident will be reported."
+];
+
 var command_list = [{
+	trigger : U("command: %s.",help.help.syntax),
 	pattern : /^help(\s+\w+)?$/i,
 	reply   : function(from,to,input) {
 		var match,name,reply,rx_match;
@@ -322,12 +361,13 @@ var command_list = [{
 		}
 		
 		_.chain(reply).flatten().each(function(line) {
-			send(to,from,line,input);
+			send(to,from,line,input,U("command: %s",help.help.syntax));
 		}).value();
 		
 		return "if that doesn't help you, then nothing can";
 	}
 },{
+	trigger : U("command: %s.","leave"),
 	pattern : /(get out|leave)/i,
 	reply  : function(from,to,input) {
 		var partings = [
@@ -362,6 +402,7 @@ var command_list = [{
 	}
 },
 {
+	trigger : U("command: %s.",help.listshow.syntax),
 	pattern : /^listshow$/i,
 	reply   : function(from,to,input) {
 		var out;
@@ -374,6 +415,7 @@ var command_list = [{
 	}
 },
 {
+	trigger : U("command: %s.",help.listshow.syntax),
 	pattern : /^listshow \w+$/i,
 	reply   : function(from,to,input) {
 		var list,out;
@@ -390,6 +432,7 @@ var command_list = [{
 	}
 },
 {
+	trigger : U("command: %s.",help.listcreate.syntax),
 	pattern : /^listcreate \w+$/i,
 	reply   : function(from,to,input) {
 		var list,query_list;
@@ -414,6 +457,7 @@ var command_list = [{
 	}
 },
 {
+	trigger : U("command: %s.",help.match.syntax),
 	pattern : /^match (word|phrase) \/.+\/ reply .+$/i,
 	reply   : function(from,to,input) {
 		var match,mode,pattern,query_pattern,reply,rx_match;
@@ -454,10 +498,12 @@ var command_list = [{
 	}
 },
 {
+	trigger : U("command: %s.",help.match.syntax),
 	pattern : /^match/i,
 	reply   : ["?from, did you mean: " + help.match.syntax]
 },
 {
+	trigger : U("command: %s.",help.listadd.syntax),
 	pattern : /^listadd \w+\s+\w+/i,
 	reply   : function(from,to,input) {
 		var items,list,query_item;
@@ -502,6 +548,7 @@ var command_list = [{
 	}
 },
 {
+	trigger : U("command: %s.",help.search.syntax),
 	pattern : /^search\s+.+/i,
 	reply   : function(from,to,input) {
 		var param,query_search,term,terms;
@@ -524,13 +571,22 @@ var command_list = [{
 		},function(err,res) {
 			if (err) return log("FAILED SEARCH: " + term,err);
 			
-			send(to,from,U("found %d patterns for %s",res.length,term),input);
+			send(
+				to,
+				from,
+				U("found %d patterns for %s",res.length,term),
+				input,
+				U("command: %s",help.search.syntax)
+			);
+			
 			_.each(res,function(row) {
-				send(
+				send_raw(
 					to,
 					from,
 					U("%s: /%s/ reply %s",row.PatternNick,row.PatternRegExp,row.PatternReply),
-					input
+					input,
+					true,
+					U("command: %s",help.search.syntax)
 				);
 			});
 		});
@@ -539,6 +595,7 @@ var command_list = [{
 	}
 },
 {
+	trigger : U("command: %s.",help.version.syntax),
 	pattern : /(who are you|version)/i,
 	reply   : [
 		"?version at your service",
@@ -547,8 +604,34 @@ var command_list = [{
 	]
 },
 {
+	trigger : "meta-loop",
+	pattern : /^what was that\?/i,
+	reply   : function(to,from,input) {
+		var last;
+		
+		last = message_log[message_log.length - 1];
+		
+		if (!last || !last.trigger) {
+			return rand_el(secret_list);
+		}
+		
+		if (last.trigger == "meta-loop") {
+			return "the inception has begun";
+		}
+		
+		if (isstring(last.trigger)) {
+			return U("that was %s",last.trigger);
+		}
+		
+		return U("that was %s: /%s/ reply %s",
+			last.trigger.nick,
+			last.trigger.trigger,
+			last.trigger.reply);
+	}
+},
+{
 	pattern : /\bsudo\b/i,
-	reply   : ["?from is not in the sudoers file. This incident will be reported."]
+	reply   : secret_list
 },
 {
 	pattern : /(tell|make)\s/i,
@@ -630,6 +713,7 @@ function create_pattern(pattern,mode,reply,nick) {
 	index = pattern_map[pattern];
 	
 	pattern_list[index] = pattern_list[index] || {
+		trigger : pattern,
 		pattern : mode ==  "word"
 			? new RegExp("\\b"+pattern+"\\b","i")
 			: new RegExp(pattern,"i"),
@@ -688,7 +772,7 @@ function handle_command(from,to,message) {
 		if (isfn(c.reply)) out = c.reply(from,to,input);
 		else out = rand_el(c.reply);
 		
-		send(to,from,out,m_command);
+		send(to,from,out,m_command,c.trigger||null);
 	});
 	
 	return handled;
@@ -701,7 +785,7 @@ function handle_repeat(from,to,message) {
 	
 	state.last_repeat = repeat;
 	
-	send(to,from,repeat,"");
+	send(to,from,repeat,"",null);
 }
 
 function handle_message(from, to, message) {
@@ -734,7 +818,7 @@ function handle_message(from, to, message) {
 			
 			out = rand_el(p.reply);
 			
-			send(to,from,out,m_message);
+			send(to,from,out,m_message,p);
 			
 			handled = true;
 		}
@@ -759,7 +843,7 @@ function handle_action(from,to,text,message) {
 	
 	action_modifier = rand_el(action_modifiers);
 	
-	send(to,from,text + " " + action_modifier);
+	send(to,from,text + " " + action_modifier,"","builtin: action handler");
 }
 client.addListener("action",handle_action);
 
