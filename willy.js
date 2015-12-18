@@ -25,7 +25,7 @@ var config = require("./config.json");
 
 config.regex_command = new RegExp("^"+config.name+"\\b","i");
 config.verbosity = config.verbosity || 1.0;
-config.version = "willy-bot-1.1.4";
+config.version = "willy-bot-1.2.1";
 
 function bool(b) {
 	return (b === "false") ? false : Boolean(b);
@@ -248,7 +248,15 @@ function send_raw(to,from,message,m_match,raw,trigger) {
 }
 
 function send(to,from,message,m_match,trigger) {
-	send_raw(to,from,message,m_match,false,trigger);
+	var raw;
+	
+	raw = false;
+	if (message.match(/^\/raw\s+/i)) {
+		message = message.replace(/^\/raw\s+/i,"");
+		raw = true;
+	}
+	
+	send_raw(to,from,message,m_match,raw,trigger);
 }
 
 var client = new irc.Client(config.server,config.name,{
@@ -625,7 +633,7 @@ var command_list = [{
 			return U("that was %s",last.trigger.trigger);
 		}
 		
-		return U("that was %s: /%s/ reply %s",
+		return U("/raw that was %s: /%s/ reply %s",
 			last.trigger.nick,
 			last.trigger.trigger,
 			last.trigger.reply);
@@ -711,7 +719,7 @@ db.query(query_lists,function(err,res) {
 	pattern_list.push({
 		trigger : "builtin: <list name> reply <list item>",
 		builtin : true,
-		pattern : new RegExp("("+list_pattern+")","i"),
+		pattern : new RegExp("\\b("+list_pattern+")\\b","i"),
 		reply   : [
 			"actually, ?rand_?match",
 			"?match, you mean like ?rand_?match...?",
@@ -876,12 +884,15 @@ function handle_action(from,to,text,message) {
 client.addListener("action",handle_action);
 
 var nick_list = [];
+var nick_pattern_index = -1;
 
 function nick_strip(nick) {
 	return string(nick).replace(/[^\w]/,"");
 }
 
 function nick_add(nick) {
+	var nick_pattern;
+	
 	nick = nick_strip(nick);
 	
 	if (!nick) return;
@@ -889,10 +900,31 @@ function nick_add(nick) {
 	nick_list.push(nick);
 	
 	nick_list = _.uniq(nick_list);
+	nick_pattern = nick_list.join("|");
+	
+	if (nick_pattern_index === -1) {
+		nick_pattern_index = -1 + pattern_list.push({
+			trigger : "builtin: <nick> reply <abuse>",
+			builtin : true,
+			pattern : new RegExp("\\b("+nick_pattern+")\\b","i"),
+			reply   : [
+				"?match, is a punk",
+				"this one time i hooked up with ?match's ?rand_person",
+				"?match!!!"
+			]
+		});
+	}
+	else {
+		pattern_list[nick_pattern_index].pattern = new RegExp("\\b("+nick_pattern+")\\b","i");
+	}
 }
 
 function nick_remove(nick) {
 	nick_list = _.without(nick_list,nick_strip(nick));
+	
+	if (nick_pattern_index !== -1) {
+		pattern_list[nick_pattern_index].pattern = new RegExp("\\b("+nick_pattern+")\\b","i");
+	}
 }
 
 function handle_names(channel,nicks) {

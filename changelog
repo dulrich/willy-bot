@@ -9,6 +9,7 @@
 
 # 2015-12-17 -- 1.2.1
 * ?rand_nick to target names in channel
+* recognize current nicks and comment on mentions
 
 # 2015-12-16 -- 1.2.0
 * command: what was that?
