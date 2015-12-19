@@ -7,6 +7,9 @@
 * random jokes http://www.icndb.com/api/ http://api.icndb.com/jokes/random
 * fix hard-coded (server start) times in time command
 
+# 2015-12-18
+* ?posses_<list> syntax for making possessive words
+
 # 2015-12-17 -- 1.2.1
 * ?rand_nick to target names in channel
 * recognize current nicks and comment on mentions

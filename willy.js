@@ -25,7 +25,7 @@ var config = require("./config.json");
 
 config.regex_command = new RegExp("^"+config.name+"\\b","i");
 config.verbosity = config.verbosity || 1.0;
-config.version = "willy-bot-1.2.1";
+config.version = U("%s-bot-1.2.1",config.name);
 
 function bool(b) {
 	return (b === "false") ? false : Boolean(b);
@@ -178,12 +178,13 @@ function replace_tokens(str,from,m_match) {
 	}
 	
 	_.each(lists,function(list,name) {
-		var rx_indef,rx_multi,rx_plain;
+		var rx_indef,rx_multi,rx_plain,rx_posses;
 		var val;
 		
 		rx_indef = new RegExp("\\\?indef_"+name+"\\b","i");
 		rx_multi = new RegExp("\\\?multi_"+name+"\\b","i");
 		rx_plain = new RegExp("\\\?rand_"+name+"\\b","i");
+		rx_posses = new RegExp("\\\?posses_"+name+"\\b","i");
 		
 		while(out.match(rx_indef)) {
 			val = rand_el(list);
@@ -206,6 +207,15 @@ function replace_tokens(str,from,m_match) {
 		
 		while(out.match(rx_plain)) {
 			out = out.replace(rx_plain,rand_el(list));
+		}
+		
+		while(out.match(rx_posses)) {
+			val = rand_el(list);
+			
+			val = val.replace(/s$/i,"s'");
+			val = val.replace(/([^s])$/i,"$1's");
+			
+			out = out.replace(rx_posses,val);
 		}
 	});
 	
@@ -318,6 +328,11 @@ var help = {
 			"* pattern is a regular express, use \\ for character classes, etc",
 			"* reply is the rest of the message; use ?rand_<list> for more fun"
 		]
+	},
+	rand : {
+		use    : "get a random item from <list>",
+		syntax : "rand <list>",
+		notes  : ""
 	},
 	search : {
 		use    : "look for patterns like <term>",
@@ -449,14 +464,21 @@ var command_list = [{
 		
 		list = input.split(" ")[1];
 		
+		if (list.length > 8) {
+			return "?from: stop trying to waste space with those long list names";
+		}
+		
 		if (lists[list]) {
 			return "?from: that list already exists; do i look like your ?rand_person?";
 		}
 		
 		query_list = "INSERT IGNORE INTO wb_list \
-			SET ListName = " + db.escape(list);
+			SET ListName = ?list";
 		
-		db.query(query_list,function(err,res) {
+		query(db,{
+			query : query_list,
+			param : { list : list }
+		},function(err,res) {
 			if (err) return log("FAILED TO START LIST :" + list,err);
 			
 			log("STARTED LIST: " + list);
@@ -470,7 +492,7 @@ var command_list = [{
 	trigger : U("command: %s.",help.match.syntax),
 	pattern : /^match (word|phrase) \/.+\/ reply .+$/i,
 	reply   : function(from,to,input) {
-		var match,mode,pattern,query_pattern,reply,rx_match;
+		var match,mode,param_pattern,pattern,query_pattern,reply,rx_match;
 		
 		rx_match = /^match (word|phrase) \/(.+)\/ reply (.+)$/i;
 		
@@ -488,16 +510,26 @@ var command_list = [{
 			pattern_map[pattern]
 			&& _.contains(pattern_list[pattern_map[pattern]].reply)
 		) {
-			return "?from: i already match that " + mode;
+			return U("?from: i already match that %s",mode);
 		}
 		
-		query_pattern = "INSERT IGNORE INTO wb_pattern \
-			SET PatternMode = " + db.escape(mode) +", \
-				PatternRegExp = " + db.escape(pattern) + ", \
-				PatternReply = " + db.escape(reply) + ", \
-				PatternNick = " + db.escape(from);
+		param_pattern = {
+			from    : from,
+			mode    : mode,
+			pattern : pattern,
+			reply   : reply
+		};
 		
-		db.query(query_pattern,function(err,res) {
+		query_pattern = "INSERT IGNORE INTO wb_pattern \
+			SET PatternMode = ?mode, \
+				PatternRegExp = ?pattern, \
+				PatternReply = ?reply, \
+				PatternNick = ?from";
+		
+		query(db,{
+			query : query_pattern,
+			param : param_pattern
+		},function(err,res) {
 			if (err) return log("FAILED TO START LIST :" + list,err);
 			
 			log("ADDED PATTERN: " + pattern);
@@ -514,9 +546,9 @@ var command_list = [{
 },
 {
 	trigger : U("command: %s.",help.listadd.syntax),
-	pattern : /^listadd \w+\s+[^"]+/i,
+	pattern : /^listadd \w+\s+(\w+|"[^"]+")+/i,
 	reply   : function(from,to,input) {
-		var items,list,query_item;
+		var items,list,param_item,query_item;
 		
 		list = input.split(" ")[1];
 		
@@ -535,12 +567,20 @@ var command_list = [{
 				return "?from: i already have that";
 			}
 			
-			query_item = "INSERT IGNORE INTO wb_item \
-				SET ItemText = " + db.escape(item) + ",\
-					ListID = (\
-					SELECT ListID FROM wb_list WHERE ListName = " + db.escape(list) + ")";
+			param_item = {
+				item : item,
+				list : list
+			};
 			
-			db.query(query_item,function(err,res) {
+			query_item = "INSERT IGNORE INTO wb_item \
+				SET ItemText = ?item,\
+					ListID = (\
+					SELECT ListID FROM wb_list WHERE ListName = ?list)";
+			
+			query(db,{
+				query : query_item,
+				param : param_item
+			},function(err,res) {
 				if (err) return log("FAILED TO ADD ITEM: " + list + ", " + item,err);
 				
 				log("ADDED LIST ITEM: " + list + ", " + item);
@@ -612,6 +652,21 @@ var command_list = [{
 		"?version reporting for duty",
 		"?version build ?rand_int100000_600000"
 	]
+},
+{
+	trigger : U("command: %s.",help.rand.syntax),
+	pattern : /^rand \w+$/i,
+	reply   : function(to,from,input) {
+		var items,list,param_item,query_item;
+		
+		list = input.split(" ")[1];
+		
+		if (!lists[list]) {
+			return "tofu";
+		}
+		
+		return U("?rand_%s",list);
+	}
 },
 {
 	trigger : "meta-loop",
@@ -701,7 +756,7 @@ var query_lists = "SELECT \
 	WHERE NOT I._deleted \
 		AND NOT L._deleted";
 
-db.query(query_lists,function(err,res) {
+query(db,query_lists,function(err,res) {
 	var list_pattern;
 	
 	if (err) return log("ERROR: failed to load replacement lists",err);
@@ -760,7 +815,7 @@ function create_pattern(pattern,mode,reply,nick) {
 	pattern_list[index].reply.push(reply);
 }
 
-db.query(query_patterns,function(err,res) {
+query(db,query_patterns,function(err,res) {
 	if (err) return log("ERROR: failed to load patterns",err);
 	
 	_.each(res,function(row) {
