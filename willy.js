@@ -24,8 +24,9 @@ var _ = require("lodash"),
 var config = require("./config.json");
 
 config.regex_command = new RegExp("^"+config.name+"\\b","i");
+config.bored_timeout = 5 * 60; // seconds
 config.verbosity = config.verbosity || 1.0;
-config.version = U("%s-bot-1.2.1",config.name);
+config.version = U("%s-bot-1.2.3",config.name);
 
 function bool(b) {
 	return (b === "false") ? false : Boolean(b);
@@ -247,12 +248,15 @@ function send_raw(to,from,message,m_match,raw,trigger) {
 	
 	log("ISAID: " + out);
 	
+	state.last_acttime = moment();
+	
 	message_log.push({
 		to      : to,
 		from    : from,
 		message : message,
 		real    : out,
 		raw     : raw,
+		time    : moment(),
 		trigger : trigger
 	});
 }
@@ -289,8 +293,24 @@ var state = {
 	last_action  : "",
 	last_message : "",
 	last_pattern : null,
-	last_repeat  : ""
+	last_repeat  : "",
+	last_evtime  : moment(),
+	last_acttime : moment()
 };
+
+function act_bored() {
+	var bored_list = [
+		"/me ?rand_action",
+		"?rand_nick: are you alive?",
+		"ping"
+	];
+	
+	if (state.last_evtime < state.last_acttime) return; // don't spam empty channel
+	
+	send(config.channels[0],"",rand_el(bored_list),"","builtin: y'all are boring");
+}
+
+var bored = setInterval(act_bored,config.bored_timeout * 1000);
 
 var action_modifiers = [
 	"too",
@@ -882,6 +902,8 @@ function handle_repeat(from,to,message) {
 function handle_message(from, to, message) {
 	var handled;
 	
+	state.last_evtime = moment();
+	
 	trace("handle_message");
 	log(from + ' => ' + to + ': ' + message);
 	
@@ -919,6 +941,8 @@ client.addListener("message",handle_message);
 
 function handle_action(from,to,text,message) {
 	var action_modifier,chance;
+	
+	state.last_evtime = moment();
 	
 	trace("handle_action");
 	log(from + ' => ' + to + ' action: ' + text);

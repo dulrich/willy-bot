@@ -3,6 +3,8 @@
 	"name"     : "willy",
 	"server"   : "irc.freenode.net",
 	
+	"bored_timeout" : 300,
+	
 	"db_host"  : "localhost",
 	"db_name"  : "willy_bot",
 	"db_user"  : "wb_user",
