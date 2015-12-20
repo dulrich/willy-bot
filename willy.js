@@ -24,7 +24,7 @@ var _ = require("lodash"),
 var config = require("./config.json");
 
 config.regex_command = new RegExp("^"+config.name+"\\b","i");
-config.bored_timeout = 5 * 60; // seconds
+config.bored_timeout = int(config.bored_timeout) || 5 * 60; // seconds
 config.verbosity = config.verbosity || 1.0;
 config.version = U("%s-bot-1.2.3",config.name);
 
@@ -294,18 +294,26 @@ var state = {
 	last_message : "",
 	last_pattern : null,
 	last_repeat  : "",
+	last_boredcheck : moment(),
 	last_evtime  : moment(),
 	last_acttime : moment()
 };
 
 function act_bored() {
 	var bored_list = [
-		"/me ?rand_action",
+		"/me ?multi_action",
 		"?rand_nick: are you alive?",
 		"ping"
 	];
 	
-	if (state.last_evtime < state.last_acttime) return; // don't spam empty channel
+	if (state.last_evtime.isAfter(state.last_boredcheck)) {
+		state.last_boredcheck = moment();
+		return; // wait at least config.bored_timeout
+	}
+	
+	state.last_boredcheck = moment();
+	
+	if (state.last_evtime.isBefore(state.last_acttime)) return; // don't spam empty channel
 	
 	send(config.channels[0],"",rand_el(bored_list),"","builtin: y'all are boring");
 }
