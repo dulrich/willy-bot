@@ -1,0 +1,18 @@
+{
+	"bitwise"       : true,
+	"browser"       : true,
+	"curly"         : false,
+	"forin"         : true,
+	"futurehostile" : true,
+	"globals"       : {},
+	"latedef"  : true,
+	"laxbreak" : true,
+	"multistr" : true,
+	"nocomma"  : true,
+	"noarg"    : true,
+	"notypeof" : true,
+	"node"     : true,
+	"sub"      : true,
+	"undef"    : true,
+	"unused"   : "vars"
+}

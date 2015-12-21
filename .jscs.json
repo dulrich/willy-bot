@@ -1,0 +1,44 @@
+{
+	"additionalRules": ["jscs-rules/*.js"],
+	
+	"disallowIdentifierNamesWithMessages": [
+		["toLowerCase","str.toLowerCase() throws an exception if str is not a string, use lowerCase(str) instead"],
+		["toUpperCase","str.toUpperCase() throws an exception if str is not a string, use upperCase(str) instead"],
+		["parseFloat","parseFloat(n) has unexpected behavior, use float(n) instead"],
+		["parseInt","parseInt(n) has unexpected behavior, use int(n) instead"],
+		["toFixed","num.toFixed(n) throws an exception if num is not a number, use fixed(num,n) instead"]
+	],
+	"requireSpacesInIfElse": {
+		"beforeOpeningCurlyBrace": true,
+		"beforeOpeningRoundBrace": true
+	},
+	
+	"disallowMixedSpacesAndTabs": true,
+	"disallowNewlineBeforeBlockStatements": true,
+	"disallowTrailingWhitespace": "ignoreEmptyLines",
+	
+	"extract" : ["**/*.html"],
+	
+	"requireObjectKeysOnNewLine": {
+		"allExcept": ["sameLine"]
+	},
+	"requireParenthesesAroundIIFE": true,
+	"requireSemicolons": true,
+	
+	"requireSpaceAfterObjectKeys": true,
+	"requireSpaceBeforeObjectValues": true,
+	
+	"requireSpacesInConditionalExpression": {
+		"afterTest": true,
+		"beforeConsequent": true,
+		"afterConsequent": true,
+		"beforeAlternate": true
+	},
+	
+	"disallowSpacesInFunctionDeclaration": {
+		"beforeOpeningRoundBrace": true
+	},
+	"requireSpacesInFunction": {
+		"beforeOpeningCurlyBrace": true
+	}
+}

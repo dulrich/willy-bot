@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+/* jshint latedef: nofunc */
+
 var _ = require("lodash"),
 	irc = require("irc"),
 	log = console.log,
@@ -27,6 +29,51 @@ config.regex_command = new RegExp("^"+config.name+"\\b","i");
 config.bored_timeout = int(config.bored_timeout) || 5 * 60; // seconds
 config.verbosity = config.verbosity || 1.0;
 config.version = U("%s-bot-1.2.3",config.name);
+
+var client = new irc.Client(config.server,config.name,{
+	// sasl : true,
+	// port : 6697,
+	// userName : ,
+	// password : ,
+	
+	channels : config.channels,
+	floodProtection : true,
+	floodProtectionDelay : 500,
+	
+	realName : config.realName || "unknown",
+	userName : config.userName || "unknown"
+});
+
+var message_log = [];
+
+var state = {
+	last_action  : "",
+	last_message : "",
+	last_pattern : null,
+	last_repeat  : "",
+	last_boredcheck : moment(),
+	last_evtime  : moment(),
+	last_acttime : moment()
+};
+
+var db = mysql.createConnection({
+	host        : config.db_host,
+	database    : config.db_name,
+	user        : config.db_user,
+	password    : config.db_pass,
+	dateStrings : true
+});
+
+var lists = {};
+
+var pattern_list,pattern_map;
+
+pattern_list = [];
+pattern_map = {};
+
+var nick_list = [];
+var nick_pattern_index = -1;
+
 
 function bool(b) {
 	return (b === "false") ? false : Boolean(b);
@@ -55,7 +102,7 @@ function ifdef(v,a,b) {
 }
 
 function int(n,b) {
-	return parseInt(n,b||10) | 0;
+	return parseInt(n,b||10) | 0; // jshint ignore:line
 }
 
 function isarray(a) {
@@ -99,7 +146,7 @@ function U() {
 }
 
 function query(db,q,cb) {
-	var exited,match,out,query_o,rx_match;
+	var exited,out,query_o,rx_match;
 	
 	exited = false;
 	
@@ -273,32 +320,6 @@ function send(to,from,message,m_match,trigger) {
 	send_raw(to,from,message,m_match,raw,trigger);
 }
 
-var client = new irc.Client(config.server,config.name,{
-	// sasl : true,
-	// port : 6697,
-	// userName : 
-	// password : 
-	
-	channels : config.channels,
-	floodProtection : true,
-	floodProtectionDelay : 500,
-	
-	realName : config.realName || "unknown",
-	userName : config.userName || "unknown"
-});
-
-var message_log = [];
-
-var state = {
-	last_action  : "",
-	last_message : "",
-	last_pattern : null,
-	last_repeat  : "",
-	last_boredcheck : moment(),
-	last_evtime  : moment(),
-	last_acttime : moment()
-};
-
 function act_bored() {
 	var bored_list = [
 		"/me ?multi_action",
@@ -318,7 +339,7 @@ function act_bored() {
 	send(config.channels[0],"",rand_el(bored_list),"","builtin: y'all are boring");
 }
 
-var bored = setInterval(act_bored,config.bored_timeout * 1000);
+setInterval(act_bored,config.bored_timeout * 1000);
 
 var action_modifiers = [
 	"too",
@@ -558,10 +579,10 @@ var command_list = [{
 			query : query_pattern,
 			param : param_pattern
 		},function(err,res) {
-			if (err) return log("FAILED TO START LIST :" + list,err);
+			if (err) return log("FAILED TO SAVE PATTERN:" + pattern,err);
 			
 			log("ADDED PATTERN: " + pattern);
-			create_pattern(pattern,mode,reply,from)
+			create_pattern(pattern,mode,reply,from);
 		});
 		
 		return "?from: ?rand_assent";
@@ -615,12 +636,6 @@ var command_list = [{
 				lists[list].push(item);
 			});
 		});
-		
-		item = input.match(/(\w+|"[\w-_ ]+")$/i)[0].replace(/"/g,"");
-		
-		
-		
-		
 		
 		return "ok ?from, ?rand_assent";
 	}
@@ -685,7 +700,7 @@ var command_list = [{
 	trigger : U("command: %s.",help.rand.syntax),
 	pattern : /^rand \w+$/i,
 	reply   : function(to,from,input) {
-		var items,list,param_item,query_item;
+		var list;
 		
 		list = input.split(" ")[1];
 		
@@ -766,16 +781,6 @@ var command_list = [{
 	]
 }];
 
-var db = mysql.createConnection({
-	host        : config.db_host,
-	database    : config.db_name,
-	user        : config.db_user,
-	password    : config.db_pass,
-	dateStrings : true
-});
-
-var lists = {};
-
 var query_lists = "SELECT \
 		L.ListName, \
 		I.ItemText \
@@ -819,10 +824,6 @@ var query_patterns = "SELECT \
 	FROM wb_pattern P \
 	WHERE NOT P._deleted \
 	ORDER BY P.PatternPriority DESC,P.PatternRegExp,P.PatternReply";
-var pattern_list,pattern_map;
-
-pattern_list = [];
-pattern_map = {};
 
 function create_pattern(pattern,mode,reply,nick) {
 	var index;
@@ -874,7 +875,7 @@ function handle_command(from,to,message) {
 	// strip out the bot name for commands in a channel
 	input = message.replace(config.regex_command,"");
 	
-	// trim leading 
+	// trim leading space & punctuation
 	input = input.replace(/^[\s,:]+/,"").replace(/\s+$/,"");
 	
 	_.each(command_list,function(c) {
@@ -970,9 +971,6 @@ function handle_action(from,to,text,message) {
 }
 client.addListener("action",handle_action);
 
-var nick_list = [];
-var nick_pattern_index = -1;
-
 function nick_strip(nick) {
 	return string(nick).replace(/[^\w]/,"");
 }
@@ -1007,7 +1005,10 @@ function nick_add(nick) {
 }
 
 function nick_remove(nick) {
+	var nick_pattern;
+	
 	nick_list = _.without(nick_list,nick_strip(nick));
+	nick_pattern = nick_list.join("|");
 	
 	if (nick_pattern_index !== -1) {
 		pattern_list[nick_pattern_index].pattern = new RegExp("\\b("+nick_pattern+")\\b","i");
