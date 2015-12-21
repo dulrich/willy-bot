@@ -17,6 +17,7 @@
 /* jshint latedef: nofunc */
 
 var _ = require("lodash"),
+	A = require("async"),
 	irc = require("irc"),
 	log = console.log,
 	moment = require("moment"),
@@ -28,21 +29,9 @@ var config = require("./config.json");
 config.regex_command = new RegExp("^"+config.name+"\\b","i");
 config.bored_timeout = int(config.bored_timeout) || 5 * 60; // seconds
 config.verbosity = config.verbosity || 1.0;
-config.version = U("%s-bot-1.2.3",config.name);
+config.version = U("%s-bot-1.2.4",config.name);
 
-var client = new irc.Client(config.server,config.name,{
-	// sasl : true,
-	// port : 6697,
-	// userName : ,
-	// password : ,
-	
-	channels : config.channels,
-	floodProtection : true,
-	floodProtectionDelay : 500,
-	
-	realName : config.realName || "unknown",
-	userName : config.userName || "unknown"
-});
+var client;
 
 var message_log = [];
 
@@ -65,6 +54,12 @@ var db = mysql.createConnection({
 });
 
 var lists = {};
+var meta_lists = {
+	bored   : [],
+	nothing : [],
+	repeat  : [],
+	secret  : []
+};
 
 var pattern_list,pattern_map;
 
@@ -73,6 +68,138 @@ pattern_map = {};
 
 var nick_list = [];
 var nick_pattern_index = -1;
+
+function load_lists(acb) {
+	var query_lists = "SELECT \
+			L.ListName, \
+			I.ItemText \
+		FROM wb_item I \
+		LEFT JOIN wb_list L ON I.ListID = L.ListID \
+		WHERE NOT I._deleted \
+			AND NOT L._deleted";
+
+	query(db,query_lists,function(err,res) {
+		var list_pattern;
+		
+		if (err) return acb("ERROR: failed to load replacement lists",err);
+		
+		_.each(res,function(row) {
+			lists[row.ListName] = lists[row.ListName] || [];
+			
+			lists[row.ListName].push(row.ItemText);
+		});
+		
+		list_pattern = _.map(lists,function(list,name) {
+			return name;
+		}).join("|");
+		
+		pattern_list.push({
+			trigger : "builtin: <list name> reply <list item>",
+			builtin : true,
+			pattern : new RegExp("\\b("+list_pattern+")\\b","i"),
+			reply   : [
+				"actually, ?rand_?match",
+				"?match, you mean like ?rand_?match...?",
+				"?rand_?match!!!",
+				"?multi_?match!!!",
+				"uhh, maybe ?rand_?match?",
+				"uhh, maybe ?multi_?match?"
+			]
+		});
+		
+		acb(null);
+	});
+}
+
+function load_meta(acb) {
+	var query_meta = "SELECT \
+			L.MetaListName, \
+			R.MetaReply \
+		FROM wb_meta_item R \
+		LEFT JOIN wb_meta_list L ON R.MetaListID = L.MetaListID \
+		WHERE NOT R._deleted \
+			AND NOT L._deleted";
+
+	query(db,query_meta,function(err,res) {
+		
+		if (err) return acb("ERROR: failed to load meta lists",err);
+		
+		_.each(res,function(row) {
+			if (!meta_lists[row.MetaListName]) return;
+			
+			meta_lists[row.MetaListName].push(row.MetaReply);
+		});
+		
+		acb(null);
+	});
+}
+
+function create_pattern(pattern,mode,reply,nick) {
+	var index;
+	
+	pattern_map[pattern] = pattern_map[pattern] || pattern_list.length;
+	
+	index = pattern_map[pattern];
+	
+	pattern_list[index] = pattern_list[index] || {
+		trigger : pattern,
+		pattern : mode ==  "word"
+			? new RegExp("\\b"+pattern+"\\b","i")
+			: new RegExp(pattern,"i"),
+		reply   : [],
+		nick    : nick
+	};
+	
+	pattern_list[index].reply.push(reply);
+}
+
+function load_patterns(acb) {
+	var query_patterns = "SELECT \
+			P.* \
+		FROM wb_pattern P \
+		WHERE NOT P._deleted \
+		ORDER BY P.PatternPriority DESC,P.PatternRegExp,P.PatternReply";
+	
+	query(db,query_patterns,function(err,res) {
+		if (err) return acb("ERROR: failed to load patterns",err);
+		
+		_.each(res,function(row) {
+			create_pattern(
+				row.PatternRegExp,
+				row.PatternMode,
+				row.PatternReply,
+				row.PatternNick
+			);
+		});
+		
+		acb(null);
+	});
+}
+
+
+A.parallel([
+	load_lists,
+	load_meta,
+	load_patterns
+],function(err) {
+	if (err) return log(err);
+	
+	client = new irc.Client(config.server,config.name,{
+		// sasl : true,
+		// port : 6697,
+		// userName : ,
+		// password : ,
+		
+		channels : config.channels,
+		floodProtection : true,
+		floodProtectionDelay : 500,
+		
+		realName : config.realName || "unknown",
+		userName : config.userName || "unknown"
+	});
+	
+	bot_init();
+});
 
 
 function bool(b) {
@@ -311,6 +438,8 @@ function send_raw(to,from,message,m_match,raw,trigger) {
 function send(to,from,message,m_match,trigger) {
 	var raw;
 	
+	message = string(message);
+	
 	raw = false;
 	if (message.match(/^\/raw\s+/i)) {
 		message = message.replace(/^\/raw\s+/i,"");
@@ -321,12 +450,6 @@ function send(to,from,message,m_match,trigger) {
 }
 
 function act_bored() {
-	var bored_list = [
-		"/me ?multi_action",
-		"?rand_nick: are you alive?",
-		"ping"
-	];
-	
 	if (state.last_evtime.isAfter(state.last_boredcheck)) {
 		state.last_boredcheck = moment();
 		return; // wait at least config.bored_timeout
@@ -336,7 +459,7 @@ function act_bored() {
 	
 	if (state.last_evtime.isBefore(state.last_acttime)) return; // don't spam empty channel
 	
-	send(config.channels[0],"",rand_el(bored_list),"","builtin: y'all are boring");
+	send(config.channels[0],"",rand_el(meta_lists.bored),"","builtin: y'all are boring");
 }
 
 setInterval(act_bored,config.bored_timeout * 1000);
@@ -374,9 +497,14 @@ var help = {
 		syntax : "match <mode> /<pattern>/ reply <reply>",
 		notes  : [
 			"* mode is word or phrase, word matches whole words only",
-			"* pattern is a regular express, use \\ for character classes, etc",
+			"* pattern is a regular expression, use \\ for character classes, etc",
 			"* reply is the rest of the message; use ?rand_<list> for more fun"
 		]
+	},
+	meta : {
+		use    : "add a new reply to <meta-list>",
+		syntax : "if <meta-list> reply <reply>",
+		notes  : "* meta-lists are bored, nothing, repeat, and secret"
 	},
 	rand : {
 		use    : "get a random item from <list>",
@@ -394,14 +522,6 @@ var help = {
 		notes  : ""
 	}
 };
-
-var secret_list = [
-	"Access Denied",
-	"401 Unauthorized",
-	"403 Forbidden",
-	"sorry, that is not permitted",
-	"?from is not in the sudoers file. This incident will be reported."
-];
 
 var command_list = [{
 	trigger : U("command: %s.",help.help.syntax),
@@ -589,6 +709,52 @@ var command_list = [{
 	}
 },
 {
+	trigger : U("command: %s.",help.meta.syntax),
+	pattern : /^if (bored|nothing|repeat|secret) reply (.+)$/i,
+	reply   : function(from,to,input) {
+		var match,meta,param_meta,query_meta,reply,rx_match;
+		
+		rx_match = /^if (bored|nothing|repeat|secret) reply (.+)$/i;
+		
+		match = rx_match.exec(input);
+		
+		if (!match || !match[1] || !match[2]) {
+			return "sorry ?from, you are not meta enough for that";
+		}
+		
+		meta    = match[1];
+		reply   = match[2];
+		
+		if (_.contains(meta_lists[meta],reply)) {
+			return U("?from: i already reply that for %s",meta);
+		}
+		
+		param_meta = {
+			from  : from,
+			meta  : meta,
+			reply : reply
+		};
+		
+		query_meta = "INSERT IGNORE INTO wb_meta_item \
+			SET MetaReply = ?reply,\
+				MetaListID = (\
+				SELECT MetaListID FROM wb_meta_list WHERE MetaListName = ?meta)";
+		
+		query(db,{
+			query : query_meta,
+			param : param_meta
+		},function(err,res) {
+			if (err) return log("FAILED TO SAVE REPLY:" + reply,err);
+			
+			log(U("ADDED REPLY: %s => %s",meta,reply));
+			
+			meta_lists[meta].push(reply);
+		});
+		
+		return "?from: ?rand_assent";
+	}
+},
+{
 	trigger : U("command: %s.",help.match.syntax),
 	pattern : /^match/i,
 	reply   : ["?from, did you mean: " + help.match.syntax]
@@ -720,7 +886,7 @@ var command_list = [{
 		last = message_log[message_log.length - 1];
 		
 		if (!last || !last.trigger) {
-			return rand_el(secret_list);
+			return rand_el(meta_lists.secret);
 		}
 		
 		if (last.trigger == "meta-loop") {
@@ -739,7 +905,7 @@ var command_list = [{
 },
 {
 	pattern : /\bsudo\b/i,
-	reply   : secret_list
+	reply   : meta_lists.secret
 },
 {
 	pattern : /(tell|make)\s/i,
@@ -765,297 +931,208 @@ var command_list = [{
 },
 {
 	pattern : /.?/,
-	reply   : [
-		"would you like to learn about ?multi_animal?",
-		"would you like to learn about ?multi_food?",
-		"do you even speak ?rand_lang?",
-		"how about i teach you ?rand_lang",
-		"how about you go ?rand_action instead",
-		"/me hums a tune",
-		"/me humps ?from's ?rand_person",
-		"i am not the bot you are looking for",
-		"/me ?multi_action",
-		"who, me?",
-		"do you even have a ?rand_bodypart?",
-		"i've got nothing left to do but ?rand_action"
-	]
+	reply   : meta_lists.nothing
 }];
 
-var query_lists = "SELECT \
-		L.ListName, \
-		I.ItemText \
-	FROM wb_item I \
-	LEFT JOIN wb_list L ON I.ListID = L.ListID \
-	WHERE NOT I._deleted \
-		AND NOT L._deleted";
+// ===== BOT STARTUP ===== //
 
-query(db,query_lists,function(err,res) {
-	var list_pattern;
-	
-	if (err) return log("ERROR: failed to load replacement lists",err);
-	
-	_.each(res,function(row) {
-		lists[row.ListName] = lists[row.ListName] || [];
+function bot_init() {
+	client.addListener('error', function(message) {
+		log('error: ', message);
+	});
+
+	function handle_command(from,to,message) {
+		var handled,input,out;
 		
-		lists[row.ListName].push(row.ItemText);
-	});
-	
-	list_pattern = _.map(lists,function(list,name) {
-		return name;
-	}).join("|");
-	
-	pattern_list.push({
-		trigger : "builtin: <list name> reply <list item>",
-		builtin : true,
-		pattern : new RegExp("\\b("+list_pattern+")\\b","i"),
-		reply   : [
-			"actually, ?rand_?match",
-			"?match, you mean like ?rand_?match...?",
-			"?rand_?match!!!",
-			"?multi_?match!!!",
-			"uhh, maybe ?rand_?match?",
-			"uhh, maybe ?multi_?match?"
-		]
-	});
-});
+		trace("handle_command");
+		
+		// strip out the bot name for commands in a channel
+		input = message.replace(config.regex_command,"");
+		
+		// trim leading space & punctuation
+		input = input.replace(/^[\s,:]+/,"").replace(/\s+$/,"");
+		
+		_.each(command_list,function(c) {
+			var m_command;
+			
+			if (handled) return;
+			
+			m_command = input.match(c.pattern);
+			
+			if (!m_command) return;
+			
+			handled = true;
+			
+			if (isfn(c.reply)) out = c.reply(from,to,input);
+			else out = rand_el(c.reply);
+			
+			send(to,from,out,m_command,c.trigger||null);
+		});
+		
+		return handled;
+	}
 
-var query_patterns = "SELECT \
-		P.* \
-	FROM wb_pattern P \
-	WHERE NOT P._deleted \
-	ORDER BY P.PatternPriority DESC,P.PatternRegExp,P.PatternReply";
+	function handle_repeat(from,to,message) {
+		var repeat = rand_el(meta_lists.repeat);
+		
+		if (repeat == state.last_repeat) return;
+		
+		state.last_repeat = repeat;
+		
+		send(to,from,repeat,"",null);
+	}
 
-function create_pattern(pattern,mode,reply,nick) {
-	var index;
-	
-	pattern_map[pattern] = pattern_map[pattern] || pattern_list.length;
-	
-	index = pattern_map[pattern];
-	
-	pattern_list[index] = pattern_list[index] || {
-		trigger : pattern,
-		pattern : mode ==  "word"
-			? new RegExp("\\b"+pattern+"\\b","i")
-			: new RegExp(pattern,"i"),
-		reply   : [],
-		nick    : nick
-	};
-	
-	pattern_list[index].reply.push(reply);
-}
-
-query(db,query_patterns,function(err,res) {
-	if (err) return log("ERROR: failed to load patterns",err);
-	
-	_.each(res,function(row) {
-		create_pattern(row.PatternRegExp,row.PatternMode,row.PatternReply,row.PatternNick);
-	});
-});
-
-var repeat_list = [
-	"?from, do you know how to read?",
-	"?rand_lang. learn to read it",
-	"you should learn ?rand_lang. try asking your ?rand_person",
-	"my ?rand_person is more creative than you",
-	"same old, same old...",
-	"that sounds familiar",
-	"stfu somebody already said that",
-	"your ?rand_lang ?rand_person showed me that with ?indef_noun years ago"
-];
-
-client.addListener('error', function(message) {
-	log('error: ', message);
-});
-
-function handle_command(from,to,message) {
-	var handled,input,out;
-	
-	trace("handle_command");
-	
-	// strip out the bot name for commands in a channel
-	input = message.replace(config.regex_command,"");
-	
-	// trim leading space & punctuation
-	input = input.replace(/^[\s,:]+/,"").replace(/\s+$/,"");
-	
-	_.each(command_list,function(c) {
-		var m_command;
+	function handle_message(from, to, message) {
+		var handled;
+		
+		state.last_evtime = moment();
+		
+		trace("handle_message");
+		log(from + ' => ' + to + ': ' + message);
+		
+		if (to == config.name) to = from;
+		
+		if (message == state.last_message) return handle_repeat(from,to,message);
+		
+		if (message.match(config.regex_command)) {
+			state.last_message = message;
+			
+			handled = handle_command(from,to,message);
+		}
 		
 		if (handled) return;
 		
-		m_command = input.match(c.pattern);
-		
-		if (!m_command) return;
-		
-		handled = true;
-		
-		if (isfn(c.reply)) out = c.reply(from,to,input);
-		else out = rand_el(c.reply);
-		
-		send(to,from,out,m_command,c.trigger||null);
-	});
-	
-	return handled;
-}
-
-function handle_repeat(from,to,message) {
-	var repeat = rand_el(repeat_list);
-	
-	if (repeat == state.last_repeat) return;
-	
-	state.last_repeat = repeat;
-	
-	send(to,from,repeat,"",null);
-}
-
-function handle_message(from, to, message) {
-	var handled;
-	
-	state.last_evtime = moment();
-	
-	trace("handle_message");
-	log(from + ' => ' + to + ': ' + message);
-	
-	if (to == config.name) to = from;
-	
-	if (message == state.last_message) return handle_repeat(from,to,message);
-	
-	if (message.match(config.regex_command)) {
 		state.last_message = message;
 		
-		handled = handle_command(from,to,message);
-	}
-	
-	if (handled) return;
-	
-	state.last_message = message;
-	
-	_.each(pattern_list,function(p) {
-		var m_message,out;
-		
-		m_message = message.match(p.pattern);
-		
-		if (!handled && m_message && state.last_pattern != p.pattern) {
-			state.last_pattern = p.pattern;
+		_.each(pattern_list,function(p) {
+			var m_message,out;
 			
-			out = rand_el(p.reply);
+			m_message = message.match(p.pattern);
 			
-			send(to,from,out,m_message,p);
-			
-			handled = true;
-		}
-	});
-}
-client.addListener("message",handle_message);
-
-function handle_action(from,to,text,message) {
-	var action_modifier,chance;
-	
-	state.last_evtime = moment();
-	
-	trace("handle_action");
-	log(from + ' => ' + to + ' action: ' + text);
-	
-	chance = rand(0,3);
-	
-	if (chance == 1) return;
-	else if (chance == 2) return handle_message(from,to,text);
-	
-	if (text == state.last_action) return;
-	
-	state.last_action = text;
-	
-	action_modifier = rand_el(action_modifiers);
-	
-	send(to,from,text + " " + action_modifier,"","builtin: action handler");
-}
-client.addListener("action",handle_action);
-
-function nick_strip(nick) {
-	return string(nick).replace(/[^\w]/,"");
-}
-
-function nick_add(nick) {
-	var nick_pattern;
-	
-	nick = nick_strip(nick);
-	
-	if (!nick) return;
-	
-	nick_list.push(nick);
-	
-	nick_list = _.uniq(nick_list);
-	nick_pattern = nick_list.join("|");
-	
-	if (nick_pattern_index === -1) {
-		nick_pattern_index = -1 + pattern_list.push({
-			trigger : "builtin: <nick> reply <abuse>",
-			builtin : true,
-			pattern : new RegExp("\\b("+nick_pattern+")\\b","i"),
-			reply   : [
-				"?match, is a punk",
-				"this one time i hooked up with ?match's ?rand_person",
-				"?match!!!"
-			]
+			if (!handled && m_message && state.last_pattern != p.pattern) {
+				state.last_pattern = p.pattern;
+				
+				out = rand_el(p.reply);
+				
+				send(to,from,out,m_message,p);
+				
+				handled = true;
+			}
 		});
 	}
-	else {
-		pattern_list[nick_pattern_index].pattern = new RegExp("\\b("+nick_pattern+")\\b","i");
+	client.addListener("message",handle_message);
+
+	function handle_action(from,to,text,message) {
+		var action_modifier,chance;
+		
+		state.last_evtime = moment();
+		
+		trace("handle_action");
+		log(from + ' => ' + to + ' action: ' + text);
+		
+		chance = rand(0,3);
+		
+		if (chance == 1) return;
+		else if (chance == 2) return handle_message(from,to,text);
+		
+		if (text == state.last_action) return;
+		
+		state.last_action = text;
+		
+		action_modifier = rand_el(action_modifiers);
+		
+		send(to,from,text + " " + action_modifier,"","builtin: action handler");
 	}
-}
+	client.addListener("action",handle_action);
 
-function nick_remove(nick) {
-	var nick_pattern;
-	
-	nick_list = _.without(nick_list,nick_strip(nick));
-	nick_pattern = nick_list.join("|");
-	
-	if (nick_pattern_index !== -1) {
-		pattern_list[nick_pattern_index].pattern = new RegExp("\\b("+nick_pattern+")\\b","i");
+	function nick_strip(nick) {
+		return string(nick).replace(/[^\w]/,"");
 	}
-}
 
-function handle_names(channel,nicks) {
-	if (config.channels.indexOf(channel) !== 0) return;
-	
-	_.each(nicks,function(powers,nick) {
-		return nick_add(nick);
-	});
-}
-client.addListener("names",handle_names);
+	function nick_add(nick) {
+		var nick_pattern;
+		
+		nick = nick_strip(nick);
+		
+		if (!nick) return;
+		
+		if (nick === config.name) return;
+		
+		nick_list.push(nick);
+		
+		nick_list = _.uniq(nick_list);
+		nick_pattern = nick_list.join("|");
+		
+		if (nick_pattern_index === -1) {
+			nick_pattern_index = -1 + pattern_list.push({
+				trigger : "builtin: <nick> reply <abuse>",
+				builtin : true,
+				pattern : new RegExp("\\b("+nick_pattern+")\\b","i"),
+				reply   : [
+					"?match is a punk",
+					"this one time i hooked up with ?match's ?rand_person",
+					"?match!!!"
+				]
+			});
+		}
+		else {
+			pattern_list[nick_pattern_index].pattern = new RegExp("\\b("+nick_pattern+")\\b","i");
+		}
+	}
 
-function handle_join(channel,nick,message) {
-	if (config.channels.indexOf(channel) !== 0) return;
-	
-	// if (nick == config.name) client.send("names",config.channels[0]);
-	
-	nick_add(nick);
-}
-client.addListener("join",handle_join);
+	function nick_remove(nick) {
+		var nick_pattern;
+		
+		nick_list = _.without(nick_list,nick_strip(nick));
+		nick_pattern = nick_list.join("|");
+		
+		if (nick_pattern_index !== -1) {
+			pattern_list[nick_pattern_index].pattern = new RegExp("\\b("+nick_pattern+")\\b","i");
+		}
+	}
 
-function handle_part(channel,nick,reason,message) {
-	if (config.channels.indexOf(channel) !== 0) return;
-	
-	nick_remove(nick);
-}
-client.addListener("part",handle_part);
+	function handle_names(channel,nicks) {
+		if (config.channels.indexOf(channel) !== 0) return;
+		
+		_.each(nicks,function(powers,nick) {
+			return nick_add(nick);
+		});
+	}
+	client.addListener("names",handle_names);
 
-function handle_quit(nick,reason,channels,message) {
-	nick_remove(nick);
-}
-client.addListener("part",handle_quit);
+	function handle_join(channel,nick,message) {
+		if (config.channels.indexOf(channel) !== 0) return;
+		
+		// if (nick == config.name) client.send("names",config.channels[0]);
+		
+		nick_add(nick);
+	}
+	client.addListener("join",handle_join);
 
-function handle_kick(channel,nick,by,reason,message) {
-	if (config.channels.indexOf(channel) !== 0) return;
-	
-	nick_remove(nick);
-}
-client.addListener("kick",handle_kick);
+	function handle_part(channel,nick,reason,message) {
+		if (config.channels.indexOf(channel) !== 0) return;
+		
+		nick_remove(nick);
+	}
+	client.addListener("part",handle_part);
 
-function handle_nick(nickold,nicknew,channels,message) {
-	nick_remove(nickold);
-	nick_add(nicknew);
-}
-client.addListener("nick",handle_nick);
+	function handle_quit(nick,reason,channels,message) {
+		nick_remove(nick);
+	}
+	client.addListener("part",handle_quit);
 
-log(config.name + " up.");
+	function handle_kick(channel,nick,by,reason,message) {
+		if (config.channels.indexOf(channel) !== 0) return;
+		
+		nick_remove(nick);
+	}
+	client.addListener("kick",handle_kick);
+
+	function handle_nick(nickold,nicknew,channels,message) {
+		nick_remove(nickold);
+		nick_add(nicknew);
+	}
+	client.addListener("nick",handle_nick);
+
+	log(config.name + " up.");
+}
