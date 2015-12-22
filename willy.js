@@ -212,6 +212,17 @@ function delay(fn,thisarg,args,millis) {
 	},millis);
 }
 
+function eighth(n) {
+	var whole, fract;
+	
+	n = int((float(n) + 0.06125) * 8);
+	
+	whole = int(n / 8);
+	fract = ["","1/8","1/4","3/8","1/2","5/8","3/4","7/8",""][n % 8];
+	
+	return "" + (whole ? (fract ? whole + " " + fract : whole) : fract || "0");
+}
+
 function escape(db,p,sub) {
 	sub = bool(sub);
 	
@@ -222,6 +233,12 @@ function escape(db,p,sub) {
 	}
 	
 	return db.escape(p);
+}
+
+function float(n,b) {
+	var f;
+	f = parseFloat(n,b||10);
+	return isFinite(f) ? f : 0;
 }
 
 function ifdef(v,a,b) {
@@ -322,7 +339,7 @@ function query(db,q,cb) {
 }
 
 function replace_tokens(str,from,m_match) {
-	var match,out,rx_int;
+	var out,rx_int;
 	
 	out = str;
 	
@@ -331,13 +348,12 @@ function replace_tokens(str,from,m_match) {
 	
 	out = out.replace(/\?rand_nick\b/g,rand_el(nick_list));
 	
-	rx_int = /\?rand_int([\d_]+)?/i;
-	match = rx_int.exec(out) || [];
-	
-	var min,max;
-	for(var i = 1; i < match.length;i++) {
-		min = string(match[i]).split("_")[0];
-		max = string(match[i]).split("_")[1];
+	rx_int = /\?rand_(int|eighth)([\d_]+)?/gi;
+	out = out.replace(rx_int,function(match,type,range) {
+		var min,max;
+		
+		min = string(range).split("_")[0];
+		max = string(range).split("_")[1];
 		
 		if (!max) {
 			if (!min) min = 100;
@@ -349,8 +365,13 @@ function replace_tokens(str,from,m_match) {
 		min = int(min);
 		max = int(max);
 		
-		out = out.replace(/\?rand_int([\d_]+)?/,rand(min,max));
-	}
+		if (type === "eighth") {
+			return eighth(rand(min,max) / 8);
+		}
+		else {
+			return rand(min,max);
+		}
+	});
 	
 	_.each(lists,function(list,name) {
 		var rx_indef,rx_multi,rx_plain,rx_posses;
@@ -870,6 +891,9 @@ var command_list = [{
 		
 		list = input.split(" ")[1];
 		
+		if (list === "eighth") return "?rand_eighth1_16";
+		else if (list === "int") return "?rand_int1_100";
+		
 		if (!lists[list]) {
 			return "tofu";
 		}
@@ -877,6 +901,7 @@ var command_list = [{
 		return U("?rand_%s",list);
 	}
 },
+
 {
 	trigger : "meta-loop",
 	pattern : /^what was that\?/i,
