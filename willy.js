@@ -26,7 +26,9 @@ var config = require("./config.json");
 config.regex_command = new RegExp("^"+config.name+"\\b","i");
 config.bored_timeout = 5 * 60; // seconds
 config.verbosity = config.verbosity || 1.0;
-config.version = U("%s-bot-1.2.3",config.name);
+config.version = U("%s-bot-1.2.4",config.name);
+
+var question_answers = require("./answers.json");
 
 function bool(b) {
 	return (b === "false") ? false : Boolean(b);
@@ -738,6 +740,34 @@ var command_list = [{
 		}
 		
 		return out;
+	}
+},
+{
+	pattern : /.+\?/i,
+	reply   : function(from,to,input) {
+		var answer_type,q,sum;
+		
+		q = input.toLowerCase().replace(/\n/g,"");
+		sum = 0;
+		
+		// who, what, where, why, when, how, how many|much
+		answer_type = "probability";
+		if (q.indexOf("what") == 0 || q.indexOf("wat") == 0) {
+			answer_type = "value";
+		}
+		else if (q.indexOf("when") == 0) {
+			answer_type = "temporal";
+		}
+		else if (q.indexOf("why") == 0) {
+			answer_type = "reason";
+		}
+
+		for(var i=0;i<q.length;i++) {
+			sum += q.charCodeAt(i);
+		}
+		
+		var answer_list = question_answers[answer_type];
+		return answer_list[sum % answer_list.length];
 	}
 },
 {
