@@ -6,8 +6,13 @@
 * random questions to names in channel
 * random jokes http://www.icndb.com/api/ http://api.icndb.com/jokes/random
 
-# 2015-12-25 -- 1.2.4
+# 2015-12-25 -- 1.2.5
 * bring in magic question answers
+
+# 2015-12-21 -- 1.2.4
+* move meta lists into the db
+* command: if <meta-list> reply <reply>
+* load lists, meta lists, and patterns before starting client
 
 # 2015-12-19 -- 1.2.3
 * add boredom to ping quiet channels

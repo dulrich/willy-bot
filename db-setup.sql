@@ -215,3 +215,66 @@ INSERT IGNORE INTO wb_item (ListID,ItemText) VALUES
 	(7,'steak'),
 	(7,'truffle'),
 	(7,'tuna');
+
+CREATE TABLE IF NOT EXISTS wb_meta_list (
+	MetaListID INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+	MetaListName VARCHAR(8) NOT NULL DEFAULT '',
+	_deleted TINYINT NOT NULL DEFAULT 0,
+	UNIQUE (MetaListName)
+) engine=InnoDB;
+
+CREATE TABLE IF NOT EXISTS wb_meta_item (
+	MetaItemID INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+	MetaListID INT NOT NULL DEFAULT 0,
+	MetaReply VARCHAR(500) NOT NULL DEFAULT 'nothing',
+	MetaNick VARCHAR(100) NOT NULL DEFAULT '',
+	MetaDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	_deleted TINYINT NOT NULL DEFAULT 0,
+	UNIQUE(MetaListID,MetaReply)
+) engine=InnoDB;
+
+INSERT IGNORE INTO wb_meta_list (MetaListID,MetaListName) VALUES
+	(1,'repeat'),
+	(2,'bored'),
+	(3,'secret'),
+	(4,'nothing');
+
+INSERT IGNORE INTO wb_meta_item (MetaListID,MetaReply,MetaNick) VALUES
+	(1,'?from, do you know how to read?','avid'),
+	(1,'?rand_lang. learn to read it','avid'),
+	(1,'you should learn ?rand_lang. try asking your ?rand_person','avid'),
+	(1,'my ?rand_person is more creative than you','avid'),
+	(1,'same old, same old...','avid'),
+	(1,'that sounds familiar','avid'),
+	(1,'stfu somebody already said that','avid'),
+	(1,'your ?rand_lang ?rand_person showed me that with ?indef_noun years ago','avid'),
+	(1,'that sounds familiar, kind of like your ?rand_person is with my ?rand_bodypart','avid');
+
+INSERT IGNORE INTO wb_meta_item (MetaListID,MetaReply,MetaNick) VALUES
+	(2,'/me ?multi_action','avid'),
+	(2,'?rand_nick: are you alive?','avid'),
+	(2,'ping','avid'),
+	(2,'/me pokes ?rand_nick');
+
+INSERT IGNORE INTO wb_meta_item (MetaListID,MetaReply,MetaNick) VALUES
+	(3,'Access Denied','avid'),
+	(3,'401 Unauthorized','avid'),
+	(3,'403 Forbidden','avid'),
+	(3,'404 Not Found','avid'),
+	(3,'sorry, that is not permitted','avid'),
+	(3,'?from is not in the sudoers file. This incident will be reported.','avid'),
+	(3,'throws ?indef_noun at ?from','avid');
+
+INSERT IGNORE INTO wb_meta_item (MetaListID,MetaReply,MetaNick) VALUES
+	(4,'would you like to learn about ?multi_animal?','avid'),
+	(4,'would you like to learn about ?multi_food?','avid'),
+	(4,'do you even speak ?rand_lang?','avid'),
+	(4,'how about i teach you ?rand_lang','avid'),
+	(4,'how about you go ?rand_action instead','avid'),
+	(4,'/me hums a tune','avid'),
+	(4,'/me humps ?from''s ?rand_person','avid'),
+	(4,'i am not the bot you are looking for','avid'),
+	(4,'/me ?multi_action','avid'),
+	(4,'who, me?','avid'),
+	(4,'do you even have a ?rand_bodypart?','avid'),
+	(4,'i''ve got nothing left to do but ?rand_action','avid');
