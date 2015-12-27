@@ -374,6 +374,16 @@ function replace_tokens(str,from,m_match) {
 		}
 	});
 	
+	_.each(question_answers,function(list,name) {
+		var rx_plain;
+		
+		rx_plain = new RegExp("\\\?rand_q_"+name+"\\b","i");
+		
+		while(out.match(rx_plain)) {
+			out = out.replace(rx_plain,rand_el(list));
+		}
+	});
+	
 	_.each(lists,function(list,name) {
 		var rx_indef,rx_multi,rx_plain,rx_posses;
 		var val;
@@ -958,29 +968,24 @@ var command_list = [{
 {
 	pattern : /.+\?/i,
 	reply   : function(from,to,input) {
-		var answer_type,q,sum;
-		
-		q = input.toLowerCase().replace(/\n/g,"");
-		sum = 0;
+		var answer;
 		
 		// who, what, where, why, when, how, how many|much
-		answer_type = "probability";
-		if (q.indexOf("what") == 0 || q.indexOf("wat") == 0) {
-			answer_type = "value";
+		answer = "?rand_q_prob";
+		if (input.match(/\bwh?at\b/i)) {
+			answer = "?rand_q_value";
 		}
-		else if (q.indexOf("when") == 0) {
-			answer_type = "temporal";
+		else if (input.match(/\bwhen\b/i)) {
+			answer = "?rand_q_time";
 		}
-		else if (q.indexOf("why") == 0) {
-			answer_type = "reason";
+		else if (input.match(/\bwhy\b/i)) {
+			answer = "?rand_q_reason";
 		}
-
-		for(var i=0;i<q.length;i++) {
-			sum += q.charCodeAt(i);
+		else if (input.match(/\bwho\b/i)) {
+			answer = "?rand_q_person";
 		}
 		
-		var answer_list = question_answers[answer_type];
-		return answer_list[sum % answer_list.length];
+		return answer;
 	}
 },
 {

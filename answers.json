@@ -1,5 +1,10 @@
 {
-	"probability": [
+	"person" : [
+		"?rand_celeb",
+		"?rand_person",
+		"?rand_posses ?rand_person"
+	],
+	"prob": [
 		"no",
 		"yep",
 		"nope",
@@ -20,7 +25,7 @@
 		"no reason"
 	],
 	
-	"temporal": [
+	"time": [
 		"immediately",
 		"long, long ago",
 		"once upon a time",
