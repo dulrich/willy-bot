@@ -1,7 +1,6 @@
 {
 	"person" : [
 		"?rand_celeb",
-		"?rand_person",
 		"?rand_posses ?rand_person"
 	],
 	"prob": [

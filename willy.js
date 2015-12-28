@@ -103,7 +103,11 @@ function load_lists(acb) {
 				"actually, ?rand_?match",
 				"?match, you mean like ?rand_?match...?",
 				"?rand_?match!!!",
+				"?crand_?match!!!",
+				"?indef_?match!!!",
+				"?cindef_?match!!!",
 				"?multi_?match!!!",
+				"?cmulti_?match!!!",
 				"uhh, maybe ?rand_?match?",
 				"uhh, maybe ?multi_?match?"
 			]
@@ -270,6 +274,10 @@ function isstring(s) {
 	return typeof s === "string";
 }
 
+function lowerCase(s) {
+	return string(s).toLowerCase();
+}
+
 function rand(min,max) {
 	return min + Math.floor(Math.random() * (max - min));
 }
@@ -288,6 +296,10 @@ function trace(msg) {
 
 function U() {
 	return util.format.apply(util,arguments);
+}
+
+function upperCase(s) {
+	return string(s).toUpperCase();
 }
 
 function query(db,q,cb) {
@@ -386,44 +398,62 @@ function replace_tokens(str,from,m_match) {
 	
 	_.each(lists,function(list,name) {
 		var rx_indef,rx_multi,rx_plain,rx_posses;
-		var val;
 		
-		rx_indef = new RegExp("\\\?indef_"+name+"\\b","i");
-		rx_multi = new RegExp("\\\?multi_"+name+"\\b","i");
-		rx_plain = new RegExp("\\\?rand_"+name+"\\b","i");
-		rx_posses = new RegExp("\\\?posses_"+name+"\\b","i");
+		rx_indef = new RegExp("\\\?(c?)indef_"+name+"\\b","i");
+		rx_multi = new RegExp("\\\?(c?)multi_"+name+"\\b","i");
+		rx_plain = new RegExp("\\\?(c?)rand_"+name+"\\b","i");
+		rx_posses = new RegExp("\\\?(c?)posses_"+name+"\\b","i");
 		
-		while(out.match(rx_indef)) {
+		out = out.replace(rx_indef,function(match,caps) {
+			var val;
+			
 			val = rand_el(list);
-			val = val.match(/^[aeiou]/)
+			
+			if (caps) val = upperCase(val);
+			
+			val = val.match(/^[aeiou]/i)
 				? "an " + val
 				: "a " + val;
 			
-			out = out.replace(rx_indef,val);
-		}
+			return val;
+		});
 		
-		while(out.match(rx_multi)) {
+		out = out.replace(rx_multi,function(match,caps) {
+			var val;
+			
 			val = rand_el(list);
+			
+			if (caps) val = upperCase(val);
 			
 			val = val.replace(/y$/i,"ies");
 			val = val.replace(/sh$/i,"shes");
 			val = val.replace(/([^s])$/i,"$1s");
 			
-			out = out.replace(rx_multi,val);
-		}
+			return val;
+		});
 		
-		while(out.match(rx_plain)) {
-			out = out.replace(rx_plain,rand_el(list));
-		}
-		
-		while(out.match(rx_posses)) {
+		out = out.replace(rx_plain,function(match,caps) {
+			var val;
+			
 			val = rand_el(list);
+			
+			if (caps) val = upperCase(val);
+			
+			return val;
+		});
+		
+		out = out.replace(rx_posses,function(match,caps) {
+			var val;
+			
+			val = rand_el(list);
+			
+			if (caps) val = upperCase(val);
 			
 			val = val.replace(/s$/i,"s'");
 			val = val.replace(/([^s])$/i,"$1's");
 			
-			out = out.replace(rx_posses,val);
-		}
+			return val;
+		});
 	});
 	
 	out = out.replace(/\?version\b/g,config.version);
@@ -537,6 +567,11 @@ var help = {
 		use    : "add a new reply to <meta-list>",
 		syntax : "if <meta-list> reply <reply>",
 		notes  : "* meta-lists are bored, nothing, repeat, and secret"
+	},
+	pattern : {
+		use    : "show stats about known patterns",
+		syntax : "pattern count|replies",
+		notes  : []
 	},
 	rand : {
 		use    : "get a random item from <list>",
@@ -790,6 +825,26 @@ var command_list = [{
 	trigger : U("command: %s.",help.match.syntax),
 	pattern : /^match/i,
 	reply   : ["?from, did you mean: " + help.match.syntax]
+},
+{
+	trigger : U("command: %s.",help.pattern.syntax),
+	pattern : /^pattern \w+$/i,
+	reply   : function(from,to,input) {
+		var cmd;
+		
+		cmd = input.split(" ")[1];
+		
+		if (cmd === "count") {
+			return "?from i know responses to " + pattern_list.length + " patterns";
+		}
+		else if (cmd === "replies") {
+			return "i have " + _.pluck(pattern_list,"reply").reduce(function(m,v) {
+				return m + v.length;
+			},0) + " replies";
+		}
+		
+		return "wtf are you talking about ?from?";
+	}
 },
 {
 	trigger : U("command: %s.",help.listadd.syntax),
