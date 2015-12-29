@@ -140,7 +140,7 @@ function load_meta(acb) {
 	});
 }
 
-function create_pattern(pattern,mode,reply,nick) {
+function create_pattern(pattern,reply,nick) {
 	var index;
 	
 	pattern_map[pattern] = pattern_map[pattern] || pattern_list.length;
@@ -149,9 +149,7 @@ function create_pattern(pattern,mode,reply,nick) {
 	
 	pattern_list[index] = pattern_list[index] || {
 		trigger : pattern,
-		pattern : mode ==  "word"
-			? new RegExp("\\b"+pattern+"\\b","i")
-			: new RegExp(pattern,"i"),
+		pattern : new RegExp("\\b"+pattern+"\\b","i"),
 		reply   : [],
 		nick    : nick
 	};
@@ -172,7 +170,6 @@ function load_patterns(acb) {
 		_.each(res,function(row) {
 			create_pattern(
 				row.PatternRegExp,
-				row.PatternMode,
 				row.PatternReply,
 				row.PatternNick
 			);
@@ -399,10 +396,10 @@ function replace_tokens(str,from,m_match) {
 	_.each(lists,function(list,name) {
 		var rx_indef,rx_multi,rx_plain,rx_posses;
 		
-		rx_indef = new RegExp("\\\?(c?)indef_"+name+"\\b","i");
-		rx_multi = new RegExp("\\\?(c?)multi_"+name+"\\b","i");
-		rx_plain = new RegExp("\\\?(c?)rand_"+name+"\\b","i");
-		rx_posses = new RegExp("\\\?(c?)posses_"+name+"\\b","i");
+		rx_indef = new RegExp("\\\?(c?)indef_"+name+"\\b","gi");
+		rx_multi = new RegExp("\\\?(c?)multi_"+name+"\\b","gi");
+		rx_plain = new RegExp("\\\?(c?)rand_"+name+"\\b","gi");
+		rx_posses = new RegExp("\\\?(c?)posses_"+name+"\\b","gi");
 		
 		out = out.replace(rx_indef,function(match,caps) {
 			var val;
@@ -556,9 +553,8 @@ var help = {
 	},
 	match : {
 		use    : "create a new <reply> to <pattern>",
-		syntax : "match <mode> /<pattern>/ reply <reply>",
+		syntax : "match /<pattern>/ reply <reply>",
 		notes  : [
-			"* mode is word or phrase, word matches whole words only",
 			"* pattern is a regular expression, use \\ for character classes, etc",
 			"* reply is the rest of the message; use ?rand_<list> for more fun"
 		]
@@ -726,38 +722,36 @@ var command_list = [{
 },
 {
 	trigger : U("command: %s.",help.match.syntax),
-	pattern : /^match (word|phrase) \/.+\/ reply .+$/i,
+	pattern : /^match \/.+\/ reply .+$/i,
 	reply   : function(from,to,input) {
-		var match,mode,param_pattern,pattern,query_pattern,reply,rx_match;
+		var match,param_pattern,pattern,query_pattern,reply,rx_match;
 		
-		rx_match = /^match (word|phrase) \/(.+)\/ reply (.+)$/i;
+		rx_match = /^match \/(.+)\/ reply (.+)$/i;
 		
 		match = rx_match.exec(input);
 		
-		if (!match || !match[1] || !match[2] || !match[3]) {
+		if (!match || !match[1] || !match[2]) {
 			return "sorry ?from, your pattern is invalid";
 		}
 		
-		mode    = match[1];
-		pattern = match[2];
-		reply   = match[3];
+		pattern = match[1];
+		reply   = match[2];
 		
 		if (
 			pattern_map[pattern]
 			&& _.contains(pattern_list[pattern_map[pattern]].reply)
 		) {
-			return U("?from: i already match that %s",mode);
+			return U("?from: i already match that pattern");
 		}
 		
 		param_pattern = {
 			from    : from,
-			mode    : mode,
 			pattern : pattern,
 			reply   : reply
 		};
 		
 		query_pattern = "INSERT IGNORE INTO wb_pattern \
-			SET PatternMode = ?mode, \
+			SET PatternMode = 'word', \
 				PatternRegExp = ?pattern, \
 				PatternReply = ?reply, \
 				PatternNick = ?from";
@@ -769,7 +763,7 @@ var command_list = [{
 			if (err) return log("FAILED TO SAVE PATTERN:" + pattern,err);
 			
 			log("ADDED PATTERN: " + pattern);
-			create_pattern(pattern,mode,reply,from);
+			create_pattern(pattern,reply,from);
 		});
 		
 		return "?from: ?rand_assent";
