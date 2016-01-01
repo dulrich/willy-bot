@@ -237,6 +237,10 @@ function escape(db,p,sub) {
 	return db.escape(p);
 }
 
+function fixed(f,n) {
+	return float(f).toFixed(ifdef(n,int(n),2));
+}
+
 function float(n,b) {
 	var f;
 	f = parseFloat(n,b||10);
@@ -281,6 +285,13 @@ function rand(min,max) {
 
 function rand_el(list) {
 	return list[rand(0,list.length)];
+}
+
+function safe_div(a,b) {
+	a = float(a);
+	b = float(b);
+	
+	return b ? (a/b) : 0.0;
 }
 
 function string(s) {
@@ -566,7 +577,7 @@ var help = {
 	},
 	pattern : {
 		use    : "show stats about known patterns",
-		syntax : "pattern count|replies",
+		syntax : "pattern count|longest|replies|shortest|stats",
 		notes  : []
 	},
 	rand : {
@@ -622,40 +633,6 @@ var command_list = [{
 		}).value();
 		
 		return "if that doesn't help you, then nothing can";
-	}
-},{
-	trigger : U("command: %s.","leave"),
-	pattern : /(get out|leave)/i,
-	reply  : function(from,to,input) {
-		var partings = [
-			"ok ?from, i'm out",
-			"/me ?rand_action",
-			"/me hits the road"
-		];
-		
-		delay(client.part,client,[to],100);
-		
-		return rand_el(partings);
-	}
-},
-{
-	pattern : /(go die|kill you)/i,
-	reply  : function(from,to,input) {
-		delay(process.exit,null,[],100);
-		
-		return "/me commits suicide with ?indef_noun";
-	}
-},
-{
-	pattern : /^(time|got the time\??|what time is it\??)/i,
-	reply   : function(from,to,input) {
-		var times = [
-			"?from: it's " + moment().format("llll") + " here",
-			"?from: tomorrow is " + moment().to(moment().endOf("day")),
-			"?from: it's " + moment().valueOf() + "ms into the Unix Epoch"
-		];
-		
-		return rand_el(times);
 	}
 },
 {
@@ -824,17 +801,49 @@ var command_list = [{
 	trigger : U("command: %s.",help.pattern.syntax),
 	pattern : /^pattern \w+$/i,
 	reply   : function(from,to,input) {
-		var cmd;
+		var cmd,count_pattern,count_reply,patt_l,patt_s,stat_l,stat_s;
 		
 		cmd = input.split(" ")[1];
 		
+		count_pattern = pattern_list.length;
+		count_reply = _.pluck(pattern_list,"reply").reduce(function(m,v) {
+			return m + v.length;
+		},0);
+		
+		patt_l = "";
+		patt_s = "";
+		
+		stat_l = 0;
+		stat_s = 0;
+		
+		_.each(pattern_list,function(pattern) {
+			var len = pattern.builtin ? 0 : pattern.trigger.length;
+			
+			if (len > stat_l) {
+				stat_l = len;
+				patt_l = pattern.trigger;
+			}
+			
+			if (!stat_s || len < stat_s) {
+				stat_s = len;
+				patt_s = pattern.trigger;
+			}
+		});
+		
 		if (cmd === "count") {
-			return "?from i know responses to " + pattern_list.length + " patterns";
+			return U("?from i know responses to %d patterns",count_pattern);
+		}
+		else if (cmd == "longest") {
+			return U("the longest pattern is '%s' at %d characters",patt_l,stat_l);
 		}
 		else if (cmd === "replies") {
-			return "i have " + _.pluck(pattern_list,"reply").reduce(function(m,v) {
-				return m + v.length;
-			},0) + " replies";
+			return U("i have %d replies",count_reply);
+		}
+		else if (cmd == "shortest") {
+			return U("the shortest pattern is '%s' at %d characters",patt_s,stat_s);
+		}
+		else if (cmd == "stats") {
+			return U("patterns have %s replies on average",fixed(safe_div(count_reply,count_pattern)));
 		}
 		
 		return "wtf are you talking about ?from?";
@@ -932,6 +941,41 @@ var command_list = [{
 		});
 		
 		return U("looking into %s for you",term);
+	}
+},
+{
+	trigger : U("command: %s.","leave"),
+	pattern : /(get out|leave)/i,
+	reply  : function(from,to,input) {
+		var partings = [
+			"ok ?from, i'm out",
+			"/me ?rand_action",
+			"/me hits the road"
+		];
+		
+		delay(client.part,client,[to],100);
+		
+		return rand_el(partings);
+	}
+},
+{
+	pattern : /(go die|kill you)/i,
+	reply  : function(from,to,input) {
+		delay(process.exit,null,[],100);
+		
+		return "/me commits suicide with ?indef_noun";
+	}
+},
+{
+	pattern : /^(time|got the time\??|what time is it\??)/i,
+	reply   : function(from,to,input) {
+		var times = [
+			"?from: it's " + moment().format("llll") + " here",
+			"?from: tomorrow is " + moment().to(moment().endOf("day")),
+			"?from: it's " + moment().valueOf() + "ms into the Unix Epoch"
+		];
+		
+		return rand_el(times);
 	}
 },
 {
