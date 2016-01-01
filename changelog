@@ -9,6 +9,7 @@
 # 2016-01-01 -- 1.3.0
 * new year, new version
 * start supporting tags in list items and ? replacements
+* factor out standard functions into lib file
 
 # 2015-12-31 -- 1.2.7
 * add increasingly strange stats about patterns
