@@ -1,6 +1,6 @@
 # willy-bot
 
-like wally and welly, the next-gen
+like wally and welly, but the next-gen
 
 
 # functionality
@@ -29,7 +29,7 @@ The foloowing settings are recognized by willy-bot in `config.json`
 
 # license
 
-willy-bot is copyright (C) 2015  David Ulrich.
+willy-bot is copyright (C) 2015 - 2016  David Ulrich.
 
 For full license details see LICENSE.
 

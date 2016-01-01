@@ -1,5 +1,5 @@
 // willy-bot: like wally and welly, the next-gen
-// Copyright (C) 2014 - 2015  David Ulrich
+// Copyright (C) 2015 - 2016  David Ulrich
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published
@@ -29,7 +29,7 @@ var config = require("./config.json");
 config.regex_command = new RegExp("^"+config.name+"\\b","i");
 config.bored_timeout = int(config.bored_timeout) || 5 * 60; // seconds
 config.verbosity = config.verbosity || 1.0;
-config.version = U("%s-bot-1.2.4",config.name);
+config.version = U("%s-bot-1.3.0",config.name);
 
 var question_answers = require("./answers.json");
 
@@ -407,12 +407,12 @@ function replace_tokens(str,from,m_match) {
 	_.each(lists,function(list,name) {
 		var rx_indef,rx_multi,rx_plain,rx_posses;
 		
-		rx_indef = new RegExp("\\\?(c?)indef_"+name+"\\b","gi");
-		rx_multi = new RegExp("\\\?(c?)multi_"+name+"\\b","gi");
-		rx_plain = new RegExp("\\\?(c?)rand_"+name+"\\b","gi");
-		rx_posses = new RegExp("\\\?(c?)posses_"+name+"\\b","gi");
+		rx_indef = new RegExp("\\\?(c?)indef_"+name+"\\b(~[a-z]){0,}","gi");
+		rx_multi = new RegExp("\\\?(c?)multi_"+name+"\\b(~[a-z]){0,}","gi");
+		rx_plain = new RegExp("\\\?(c?)rand_"+name+"\\b(~[a-z]){0,}","gi");
+		rx_posses = new RegExp("\\\?(c?)posses_"+name+"\\b(~[a-z]){0,}","gi");
 		
-		out = out.replace(rx_indef,function(match,caps) {
+		out = out.replace(rx_indef,function(match,caps,tags) {
 			var val;
 			
 			val = rand_el(list);
@@ -426,7 +426,7 @@ function replace_tokens(str,from,m_match) {
 			return val;
 		});
 		
-		out = out.replace(rx_multi,function(match,caps) {
+		out = out.replace(rx_multi,function(match,caps,tags) {
 			var val;
 			
 			val = rand_el(list);
@@ -440,7 +440,7 @@ function replace_tokens(str,from,m_match) {
 			return val;
 		});
 		
-		out = out.replace(rx_plain,function(match,caps) {
+		out = out.replace(rx_plain,function(match,caps,tags) {
 			var val;
 			
 			val = rand_el(list);
@@ -450,7 +450,7 @@ function replace_tokens(str,from,m_match) {
 			return val;
 		});
 		
-		out = out.replace(rx_posses,function(match,caps) {
+		out = out.replace(rx_posses,function(match,caps,tags) {
 			var val;
 			
 			val = rand_el(list);
@@ -462,6 +462,23 @@ function replace_tokens(str,from,m_match) {
 			
 			return val;
 		});
+	});
+	
+	out = out.replace(/\?(c)?or(_[^\s_]+)+/gi,function(match,caps) {
+		var list,val;
+		
+		list = match.split("_");
+		list.shift();
+		
+		if (list.length === 0) {
+			return "";
+		}
+		
+		val = rand_el(list);
+		
+		if (caps) val = upperCase(val);
+		
+		return val;
 	});
 	
 	out = out.replace(/\?version\b/g,config.version);
@@ -541,61 +558,7 @@ var action_modifiers = [
 	"better than ?from"
 ];
 
-var help = {
-	help : {
-		use    : "find commands, or get help with <cmd>. you need it.",
-		syntax : "help | help <cmd>",
-		notes  : ""
-	},
-	listadd : {
-		use    : "add <item>+ to response list <list>",
-		syntax : "listadd <list> <item>+",
-		notes  : "* optionally multiple space-separated items"
-	},
-	listcreate : {
-		use    : "create new response list <list>",
-		syntax : "listcreate <list>",
-		notes  : "* list is normally singular, 'animal' not 'animals'"
-	},
-	listshow  : {
-		use    : "display existing lists with item counts, or display the items in <list>",
-		syntax : "listshow | listshow <list>",
-		notes  : ""
-	},
-	match : {
-		use    : "create a new <reply> to <pattern>",
-		syntax : "match /<pattern>/ reply <reply>",
-		notes  : [
-			"* pattern is a regular expression, use \\ for character classes, etc",
-			"* reply is the rest of the message; use ?rand_<list> for more fun"
-		]
-	},
-	meta : {
-		use    : "add a new reply to <meta-list>",
-		syntax : "if <meta-list> reply <reply>",
-		notes  : "* meta-lists are bored, nothing, repeat, and secret"
-	},
-	pattern : {
-		use    : "show stats about known patterns",
-		syntax : "pattern count|longest|replies|shortest|stats",
-		notes  : []
-	},
-	rand : {
-		use    : "get a random item from <list>",
-		syntax : "rand <list>",
-		notes  : ""
-	},
-	search : {
-		use    : "look for patterns like <term>",
-		syntax : "search <term>+",
-		notes  : ""
-	},
-	version : {
-		use    : "get version info for ?version",
-		syntax : "version",
-		notes  : ""
-	}
-};
+var help = require("./help.json");
 
 var command_list = [{
 	trigger : U("command: %s.",help.help.syntax),

@@ -1,0 +1,55 @@
+{
+	"help" : {
+		"use"    : "find commands, or get help with <cmd>. you need it.",
+		"syntax" : "help | help <cmd>",
+		"notes"  : ""
+	},
+	"listadd" : {
+		"use"    : "add <item>+ to response list <list>",
+		"syntax" : "listadd <list> <item>+",
+		"notes"  : "* optionally multiple space-separated items"
+	},
+	"listcreate" : {
+		"use"    : "create new response list <list>",
+		"syntax" : "listcreate <list>",
+		"notes"  : "* list is normally singular, 'animal' not 'animals'"
+	},
+	"listshow"  : {
+		"use"    : "display existing lists with item counts, or display the items in <list>",
+		"syntax" : "listshow | listshow <list>",
+		"notes"  : ""
+	},
+	"match" : {
+		"use"    : "create a new <reply> to <pattern>",
+		"syntax" : "match /<pattern>/ reply <reply>",
+		"notes"  : [
+			"* pattern is a regular expression, use \\ for character classes, etc",
+			"* reply is the rest of the message; use ?rand_<list> for more fun"
+		]
+	},
+	"meta" : {
+		"use"    : "add a new reply to <meta-list>",
+		"syntax" : "if <meta-list> reply <reply>",
+		"notes"  : "* meta-lists are bored, nothing, repeat, and secret"
+	},
+	"pattern" : {
+		"use"    : "show stats about known patterns",
+		"syntax" : "pattern count|longest|replies|shortest|stats",
+		"notes"  : []
+	},
+	"rand" : {
+		"use"    : "get a random item from <list>",
+		"syntax" : "rand <list>",
+		"notes"  : ""
+	},
+	"search" : {
+		"use"    : "look for patterns like <term>",
+		"syntax" : "search <term>+",
+		"notes"  : ""
+	},
+	"version" : {
+		"use"    : "get version info for ?version",
+		"syntax" : "version",
+		"notes"  : ""
+	}
+}
