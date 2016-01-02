@@ -422,7 +422,7 @@ var command_list = [{
 		
 		if (name) {
 			if (!help[name]) {
-				reply.push("?from,do you know how to type? " + name + " isn't a command");
+				reply.push("?from: do you know how to type? " + name + " isn't a command");
 			}
 			else {
 				reply.push(U("%s: %s",name,help[name].use));
@@ -518,7 +518,7 @@ var command_list = [{
 		match = rx_match.exec(input);
 		
 		if (!match || !match[1] || !match[2]) {
-			return "sorry ?from, your pattern is invalid";
+			return "?from: sorry, your pattern is invalid";
 		}
 		
 		pattern = match[1];
@@ -567,7 +567,7 @@ var command_list = [{
 		match = rx_match.exec(input);
 		
 		if (!match || !match[1] || !match[2]) {
-			return "sorry ?from, you are not meta enough for that";
+			return "?from: sorry, you are not meta enough for that";
 		}
 		
 		meta    = match[1];
@@ -641,22 +641,22 @@ var command_list = [{
 		});
 		
 		if (cmd === "count") {
-			return U("?from i know responses to %d patterns",count_pattern);
+			return U("?from: i know responses to %d patterns",count_pattern);
 		}
 		else if (cmd == "longest") {
-			return U("the longest pattern is '%s' at %d characters",patt_l,stat_l);
+			return U("?from: the longest pattern is '%s' at %d characters",patt_l,stat_l);
 		}
 		else if (cmd === "replies") {
-			return U("i have %d replies",count_reply);
+			return U("?from: i have %d replies",count_reply);
 		}
 		else if (cmd == "shortest") {
-			return U("the shortest pattern is '%s' at %d characters",patt_s,stat_s);
+			return U("?from: the shortest pattern is '%s' at %d characters",patt_s,stat_s);
 		}
 		else if (cmd == "stats") {
-			return U("patterns have %s replies on average",fixed(safe_div(count_reply,count_pattern)));
+			return U("?from: patterns have %s replies on average",fixed(safe_div(count_reply,count_pattern)));
 		}
 		
-		return "wtf are you talking about ?from?";
+		return "?from: wtf are you talking about?";
 	}
 },
 {
@@ -668,7 +668,7 @@ var command_list = [{
 		list = input.split(" ")[1];
 		
 		if (!lists[list]) {
-			return "sorry ?from, that's not a valid list";
+			return "?from: sorry, that's not a valid list";
 		}
 		
 		items = input.replace(/^listadd \w+\s+/i,"").match(/("[^"]+"|\w+)/g);
