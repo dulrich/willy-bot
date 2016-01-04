@@ -6,6 +6,9 @@
 * random questions to names in channel
 * random jokes http://www.icndb.com/api/ http://api.icndb.com/jokes/random
 
+# 2016-01-03 -- 1.3.1
+* add ability to set the next random number
+
 # 2016-01-01 -- 1.3.0
 * new year, new version
 * start supporting tags in list items and ? replacements

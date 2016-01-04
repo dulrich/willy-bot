@@ -47,6 +47,11 @@
 		"syntax" : "search <term>+",
 		"notes"  : ""
 	},
+	"setrand" : {
+		"use"    : "set random number to <num> for the next reply",
+		"syntax" : "setrand <num>",
+		"notes"  : ""
+	},
 	"version" : {
 		"use"    : "get version info for ?version",
 		"syntax" : "version",

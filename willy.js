@@ -29,7 +29,7 @@ var config = require("./config.json");
 config.regex_command = new RegExp("^"+config.name+"\\b","i");
 config.bored_timeout = int(config.bored_timeout) || 5 * 60; // seconds
 config.verbosity = config.verbosity || 1.0;
-config.version = U("%s-bot-1.3.0",config.name);
+config.version = U("%s-bot-1.3.1",config.name);
 
 var question_answers = require("./answers.json");
 
@@ -44,7 +44,8 @@ var state = {
 	last_repeat  : "",
 	last_boredcheck : moment(),
 	last_evtime  : moment(),
-	last_acttime : moment()
+	last_acttime : moment(),
+	next_rand    : null
 };
 
 var db = mysql.createConnection({
@@ -127,7 +128,6 @@ function load_meta(acb) {
 			AND NOT L._deleted";
 
 	query(db,query_meta,function(err,res) {
-		
 		if (err) return acb("ERROR: failed to load meta lists",err);
 		
 		_.each(res,function(row) {
@@ -205,6 +205,29 @@ A.parallel([
 });
 
 
+function randish_el(list) {
+	var min,max;
+	
+	min = 0;
+	max = list.length
+	
+	if (state.next_rand !== null) {
+		if (state.next_rand < min) {
+			max = min;
+		}
+		
+		if (state.next_rand > max) {
+			min = max;
+		}
+		
+		if (min !== max) {
+			min = state.next_rand;
+			max = state.next_rand;
+		}
+	}
+	
+	return list[rand(min,max)];
+}
 
 function replace_tokens(str,from,m_match) {
 	var out,rx_int;
@@ -214,7 +237,7 @@ function replace_tokens(str,from,m_match) {
 	out = out.replace(/\?from\b/g,from);
 	out = out.replace(/\?match\b/g,(m_match && m_match[0]) || "");
 	
-	out = out.replace(/\?rand_nick\b/g,rand_el(nick_list));
+	out = out.replace(/\?rand_nick\b/g,randish_el(nick_list));
 	
 	rx_int = /\?rand_(int|eighth)([\d_]+)?/gi;
 	out = out.replace(rx_int,function(match,type,range) {
@@ -247,7 +270,7 @@ function replace_tokens(str,from,m_match) {
 		rx_plain = new RegExp("\\\?rand_q_"+name+"\\b","i");
 		
 		while(out.match(rx_plain)) {
-			out = out.replace(rx_plain,rand_el(list));
+			out = out.replace(rx_plain,randish_el(list));
 		}
 	});
 	
@@ -262,7 +285,7 @@ function replace_tokens(str,from,m_match) {
 		out = out.replace(rx_indef,function(match,caps,tags) {
 			var val;
 			
-			val = rand_el(list);
+			val = randish_el(list);
 			
 			if (caps) val = upperCase(val);
 			
@@ -276,7 +299,7 @@ function replace_tokens(str,from,m_match) {
 		out = out.replace(rx_multi,function(match,caps,tags) {
 			var val;
 			
-			val = rand_el(list);
+			val = randish_el(list);
 			
 			if (caps) val = upperCase(val);
 			
@@ -290,7 +313,7 @@ function replace_tokens(str,from,m_match) {
 		out = out.replace(rx_plain,function(match,caps,tags) {
 			var val;
 			
-			val = rand_el(list);
+			val = randish_el(list);
 			
 			if (caps) val = upperCase(val);
 			
@@ -300,7 +323,7 @@ function replace_tokens(str,from,m_match) {
 		out = out.replace(rx_posses,function(match,caps,tags) {
 			var val;
 			
-			val = rand_el(list);
+			val = randish_el(list);
 			
 			if (caps) val = upperCase(val);
 			
@@ -321,7 +344,7 @@ function replace_tokens(str,from,m_match) {
 			return "";
 		}
 		
-		val = rand_el(list);
+		val = randish_el(list);
 		
 		if (caps) val = upperCase(val);
 		
@@ -357,6 +380,10 @@ function send_raw(to,from,message,m_match,raw,trigger) {
 	log("ISAID: " + out);
 	
 	state.last_acttime = moment();
+	if (!raw) {
+		log(U("UNSET RAND %s",state.next_rand));
+		state.next_rand = null;
+	}
 	
 	message_log.push({
 		to      : to,
@@ -815,7 +842,20 @@ var command_list = [{
 		return U("?rand_%s",list);
 	}
 },
-
+{
+	trigger : U("command: %s.",help.setrand.syntax),
+	pattern : /^setrand \d+$/,
+	reply   : function(to,from,input) {
+		var next_rand;
+		
+		next_rand = int(input.split(" ")[1]);
+		
+		state.next_rand = next_rand;
+		log(U("SET RAND %s",state.next_rand));
+		
+		return U("/raw random number set to %d",next_rand);
+	}
+},
 {
 	trigger : "meta-loop",
 	pattern : /^what was that\?/i,
