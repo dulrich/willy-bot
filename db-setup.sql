@@ -278,3 +278,82 @@ INSERT IGNORE INTO wb_meta_item (MetaListID,MetaReply,MetaNick) VALUES
 	(4,'who, me?','avid'),
 	(4,'do you even have a ?rand_bodypart?','avid'),
 	(4,'i''ve got nothing left to do but ?rand_action','avid');
+
+
+CREATE TABLE IF NOT EXISTS wb_answer_list (
+	AnswerListID INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+	AnswerListName VARCHAR(8) NOT NULL DEFAULT '',
+	_deleted TINYINT NOT NULL DEFAULT 0,
+	UNIQUE (AnswerListName)
+) engine=InnoDB;
+
+CREATE TABLE IF NOT EXISTS wb_answer_item (
+	AnswerItemID INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+	AnswerListID INT NOT NULL DEFAULT 0,
+	AnswerReply VARCHAR(500) NOT NULL DEFAULT 'np hard',
+	AnswerNick VARCHAR(100) NOT NULL DEFAULT '',
+	AnswerDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	_deleted TINYINT NOT NULL DEFAULT 0,
+	UNIQUE(AnswerListID,AnswerReply)
+) engine=InnoDB;
+
+INSERT IGNORE INTO wb_answer_list (AnswerListID,AnswerListName) VALUES
+	(1,'location'),
+	(2,'person'),
+	(3,'prob'),
+	(4,'reason'),
+	(5,'time'),
+	(6,'value');
+
+INSERT IGNORE INTO wb_answer_item (AnswerListID,AnswerReply,AnswerNick) VALUES
+	(1,'on the far side of the moon','avid'),
+	(1,'Atlantis','avid'),
+	(1,'London, Paris, or NYC','avid'),
+	(1,'either LA or NYC','avid'),
+	(1,'in my pants','avid'),
+	(1,'?rand_city','avid'),
+	(1,'in your ?posess_person ?rand_clothing','avid'),
+	(1,'in a galaxy far, far away','avid');
+
+INSERT IGNORE INTO wb_answer_item (AnswerListID,AnswerReply,AnswerNick) VALUES
+	(2,'?rand_celeb','avid'),
+	(2,'?rand_posses ?rand_person','avid');
+
+INSERT IGNORE INTO wb_answer_item (AnswerListID,AnswerReply,AnswerNick) VALUES
+	(3,'no','avid'),
+	(3,'yep','avid'),
+	(3,'nope','avid'),
+	(3,'maybe','avid'),
+	(3,'cloudy','avid'),
+	(3,'unclear','avid'),
+	(3,'certainly','avid'),
+	(3,'indubitably','avid'),
+	(3,'so it will be','avid'),
+	(3,'definitely not','avid'),
+	(3,'the mists of time are shrouded','avid');
+
+INSERT IGNORE INTO wb_answer_item (AnswerListID,AnswerReply,AnswerNick) VALUES
+	(4,'for fun','avid'),
+	(4,'for the children','avid'),
+	(4,'for the ?rand_group','avid'),
+	(4,'just because','avid'),
+	(4,'no reason','avid');
+
+INSERT IGNORE INTO wb_answer_item (AnswerListID,AnswerReply,AnswerNick) VALUES
+	(5,'immediately','avid'),
+	(5,'long, long ago','avid'),
+	(5,'once upton a time','avid'),
+	(5,'right now','avid'),
+	(5,'yesterday','avid'),
+	(5,'never','avid');
+
+INSERT IGNORE INTO wb_answer_item (AnswerListID,AnswerReply,AnswerNick) VALUES
+	(,'42','avid'),
+	(,'your mom','avid'),
+	(,'your data','avid'),
+	(,'a very large sheep','avid'),
+	(,'10 lords a-leaping','avid'),
+	(,'Voldemort','avid'),
+	(,'Cthulu','avid'),
+	(,'the Spanish Inquisition','avid'),
+	(,'the fruitcake your ?rand_person gave you last ?rand_holiday','avid');
