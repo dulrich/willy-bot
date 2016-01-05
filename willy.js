@@ -31,7 +31,7 @@ config.bored_timeout = int(config.bored_timeout) || 5 * 60; // seconds
 config.verbosity = config.verbosity || 1.0;
 config.version = U("%s-bot-1.3.1",config.name);
 
-var question_answers = require("./answers.json");
+var question_answers = {};
 
 var client;
 
@@ -179,11 +179,36 @@ function load_patterns(acb) {
 	});
 }
 
+function load_answers(acb) {
+	var query_answers = "SELECT \
+			L.AnswerListName, \
+			A.AnswerReply \
+		FROM wb_answer_item A \
+		LEFT JOIN wb_answer_list L ON A.AnswerListID = L.AnswerListID \
+		WHERE NOT A._deleted \
+			AND NOT L._deleted";
+	
+	query(db,query_answers,function(err,res) {
+		if (err) return acb("ERROR: failed to load answers",err);
+		
+		_.each(res,function(row) {
+			if (!question_answers[row.AnswerListName]) {
+				question_answers[row.AnswerListName] = [];
+			}
+			
+			question_answers[row.AnswerListName].push(row.AnswerReply);
+		});
+		
+		acb(null);
+	});
+}
+
 
 A.parallel([
 	load_lists,
 	load_meta,
-	load_patterns
+	load_patterns,
+	load_answers
 ],function(err) {
 	if (err) return log(err);
 	
@@ -209,7 +234,7 @@ function randish_el(list) {
 	var min,max;
 	
 	min = 0;
-	max = list.length
+	max = list.length - 1;
 	
 	if (state.next_rand !== null) {
 		if (state.next_rand < min) {
@@ -1071,7 +1096,7 @@ function bot_init() {
 				builtin : true,
 				pattern : new RegExp("\\b("+nick_pattern+")\\b","i"),
 				reply   : [
-					"?match is a punk",
+					"?match is a ?or_punk_jerk_loser",
 					"this one time i hooked up with ?match's ?rand_person",
 					"?match!!!"
 				]

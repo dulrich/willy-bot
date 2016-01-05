@@ -348,12 +348,12 @@ INSERT IGNORE INTO wb_answer_item (AnswerListID,AnswerReply,AnswerNick) VALUES
 	(5,'never','avid');
 
 INSERT IGNORE INTO wb_answer_item (AnswerListID,AnswerReply,AnswerNick) VALUES
-	(,'42','avid'),
-	(,'your mom','avid'),
-	(,'your data','avid'),
-	(,'a very large sheep','avid'),
-	(,'10 lords a-leaping','avid'),
-	(,'Voldemort','avid'),
-	(,'Cthulu','avid'),
-	(,'the Spanish Inquisition','avid'),
-	(,'the fruitcake your ?rand_person gave you last ?rand_holiday','avid');
+	(6,'42','avid'),
+	(6,'your mom','avid'),
+	(6,'your data','avid'),
+	(6,'a very large sheep','avid'),
+	(6,'10 lords a-leaping','avid'),
+	(6,'Voldemort','avid'),
+	(6,'Cthulu','avid'),
+	(6,'the Spanish Inquisition','avid'),
+	(6,'the fruitcake your ?rand_person gave you last ?rand_holiday','avid');
