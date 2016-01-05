@@ -20,7 +20,8 @@ var _ = require("lodash"),
 	A = require("async"),
 	irc = require("irc"),
 	moment = require("moment"),
-	mysql = require("mysql");
+	mysql = require("mysql"),
+	num_to_str = require("./number_to_string.js");
 
 require("./fn.js")(global);
 
@@ -29,7 +30,7 @@ var config = require("./config.json");
 config.regex_command = new RegExp("^"+config.name+"\\b","i");
 config.bored_timeout = int(config.bored_timeout) || 5 * 60; // seconds
 config.verbosity = config.verbosity || 1.0;
-config.version = U("%s-bot-1.3.1",config.name);
+config.version = U("%s-bot-1.3.2",config.name);
 
 var question_answers = {};
 
@@ -264,8 +265,8 @@ function replace_tokens(str,from,m_match) {
 	
 	out = out.replace(/\?rand_nick\b/g,randish_el(nick_list));
 	
-	rx_int = /\?rand_(int|eighth)([\d_]+)?/gi;
-	out = out.replace(rx_int,function(match,type,range) {
+	rx_int = /\?(t)?rand_(int|eighth)([\d_]+)?/gi;
+	out = out.replace(rx_int,function(match,text,type,range) {
 		var min,max;
 		
 		min = string(range).split("_")[0];
@@ -283,6 +284,9 @@ function replace_tokens(str,from,m_match) {
 		
 		if (type === "eighth") {
 			return eighth(rand(min,max) / 8);
+		}
+		else if (text === "t") {
+			return num_to_str(rand(min,max));
 		}
 		else {
 			return rand(min,max);
@@ -767,7 +771,7 @@ var command_list = [{
 		term = input.replace(/^search\s+/i,"");
 		terms = term.split(/ _-/);
 		
-		query_search = "SELECT * FROM wb_pattern WHERE 0 ";
+		query_search = "SELECT * FROM wb_pattern WHERE NOT _deleted AND ( 0 ";
 		
 		param = {};
 		_.each(terms,function(t,i) {
@@ -775,6 +779,8 @@ var command_list = [{
 			query_search += " OR PatternReply LIKE ?term_"+i;
 			param["term_" + i] = "%"+t+"%";
 		});
+		
+		query_search += " ) ";
 		
 		query(db,{
 			query : query_search,
