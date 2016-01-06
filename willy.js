@@ -30,7 +30,7 @@ var config = require("./config.json");
 config.regex_command = new RegExp("^"+config.name+"\\b","i");
 config.bored_timeout = int(config.bored_timeout) || 5 * 60; // seconds
 config.verbosity = config.verbosity || 1.0;
-config.version = U("%s-bot-1.3.2",config.name);
+config.version = U("%s-bot-1.3.3",config.name);
 
 var question_answers = {};
 
@@ -199,6 +199,10 @@ function load_answers(acb) {
 			
 			question_answers[row.AnswerListName].push(row.AnswerReply);
 		});
+		
+		help.question.notes.push(U(
+			"* <type> is %s",_.keys(question_answers).join("|")
+		));
 		
 		acb(null);
 	});
@@ -607,6 +611,54 @@ var command_list = [{
 			
 			log("ADDED PATTERN: " + pattern);
 			create_pattern(pattern,reply,from);
+		});
+		
+		return "?from: ?rand_assent";
+	}
+},
+{
+	trigger : U("command: %s.",help.question.syntax),
+	pattern : /^question \w+ reply .+$/i,
+	reply   : function(from,to,input) {
+		var match,param_answer,query_answer,reply,rx_match,list;
+		
+		rx_match = /^question (\w+) reply (.+)$/i;
+		
+		match = rx_match.exec(input);
+		
+		if (!match || !match[1] || !match[2]) {
+			return "?from: sorry, your answer is invalid";
+		}
+		
+		list  = match[1];
+		reply = match[2];
+		
+		if (!question_answers[list])
+		
+		if (_.contains(question_answers[list],reply)) {
+			return U("?from: i already match that pattern");
+		}
+		
+		param_answer = {
+			from  : from,
+			reply : reply,
+			list  : list
+		};
+		
+		query_answer = "INSERT IGNORE INTO wb_answer_item \
+			SET AnswerReply = ?reply, \
+				AnswerNick = ?from, \
+				AnswerListID = (\
+				SELECT AnswerListID FROM wb_answer_list WHERE AnswerListName = ?list)";
+		
+		query(db,{
+			query : query_answer,
+			param : param_answer
+		},function(err,res) {
+			if (err) return log("FAILED TO SAVE ANSWER:" + reply,err);
+			
+			log("ADDED ANSWER: " + reply);
+			question_answers[list].push(reply);
 		});
 		
 		return "?from: ?rand_assent";

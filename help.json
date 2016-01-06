@@ -37,6 +37,11 @@
 		"syntax" : "pattern count|longest|replies|shortest|stats",
 		"notes"  : []
 	},
+	"question" : {
+		"use"    : "add a new reply for <type> questions",
+		"syntax" : "question <type> reply <reply>",
+		"notes"  : []
+	},
 	"rand" : {
 		"use"    : "get a random item from <list>",
 		"syntax" : "rand <list>",
