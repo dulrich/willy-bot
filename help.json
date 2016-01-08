@@ -32,6 +32,11 @@
 		"syntax" : "if <meta-list> reply <reply>",
 		"notes"  : "* meta-lists are bored, nothing, repeat, and secret"
 	},
+	"mode" : {
+		"use"    : "switch bot to <mode>",
+		"syntax" : "mode <mode>",
+		"notes"  : ""
+	},
 	"pattern" : {
 		"use"    : "show stats about known patterns",
 		"syntax" : "pattern count|longest|replies|shortest|stats",

@@ -4,6 +4,7 @@
 	"server"   : "irc.freenode.net",
 	
 	"bored_timeout" : 300,
+	"mode"          : "normal",
 	
 	"db_host"  : "localhost",
 	"db_name"  : "willy_bot",

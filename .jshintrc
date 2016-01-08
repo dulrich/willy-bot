@@ -5,6 +5,7 @@
 	"forin"         : true,
 	"futurehostile" : true,
 	"globals"       : {
+		"array"     : false,
 		"bool"      : false,
 		"delay"     : false,
 		"eighth"    : false,
@@ -20,6 +21,7 @@
 		"isstring"  : false,
 		"log"       : false,
 		"lowerCase" : false,
+		"orin"      : false,
 		"rand"      : false,
 		"rand_el"   : false,
 		"safe_div"  : false,

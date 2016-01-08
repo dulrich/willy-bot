@@ -30,7 +30,7 @@ var config = require("./config.json");
 config.regex_command = new RegExp("^"+config.name+"\\b","i");
 config.bored_timeout = int(config.bored_timeout) || 5 * 60; // seconds
 config.verbosity = config.verbosity || 1.0;
-config.version = U("%s-bot-1.3.3",config.name);
+config.version = U("%s-bot-1.4.0",config.name);
 
 var question_answers = {};
 
@@ -386,6 +386,35 @@ function replace_tokens(str,from,m_match) {
 	
 	out = out.replace(/\?version\b/g,config.version);
 	
+	if (config.mode == "ye olde englishe") {
+		_.each(ye_olde_words,function(pair,i) {
+			if (isarray(pair)) {
+				ye_olde_words[i] = {
+					new    : pair[0],
+					olde   : pair[1],
+					regexp : new RegExp("\\b"+pair[0]+"\\b","gi")
+				};
+			}
+			
+			out = out.replace(pair.regexp,pair.olde);
+		});
+	}
+	else if (config.mode === "l33t h4x0r") {
+		_.each(l33t_h4x0r_w4rdz,function(pair,i) {
+			if (isarray(pair)) {
+				l33t_h4x0r_w4rdz[i] = {
+					l33t   : pair[1],
+					r3g3xp : new RegExp(pair[0],"gi")
+				};
+				
+				pair = l33t_h4x0r_w4rdz[i];
+			}
+			
+			out = out.replace(pair.r3g3xp,pair.l33t);
+		});
+	}
+	else log(config.mode);
+	
 	return out;
 }
 
@@ -413,7 +442,7 @@ function send_raw(to,from,message,m_match,raw,trigger) {
 	log("ISAID: " + out);
 	
 	state.last_acttime = moment();
-	if (!raw) {
+	if (!raw && state.next_rand !== null) {
 		log(U("UNSET RAND %s",state.next_rand));
 		state.next_rand = null;
 	}
@@ -463,6 +492,56 @@ var action_modifiers = [
 	"with ?from",
 	"with ?indef_noun",
 	"better than ?from"
+];
+
+var l33t_h4x0r_w4rdz = [
+	["\\b(too|to|two)\\b","2"],
+	["\\b([b-df-hj-np-tv-z])ate\\b","$18"],
+	["you","u"],
+	["oh","o"],
+	["aa","44"],
+	["ee","33"],
+	["ii","11"],
+	["oo","00"],
+	["tt","77"],
+	["t","7"],
+	["([^aeiou])a([b-df-hj-np-tv-z])","$14$2"],
+	["([^aeiou])e([b-df-hj-np-tv-z])","$13$2"],
+	["([^aeiou])i([b-df-hj-np-tv-z])","$11$2"],
+	["([^aeiou])o([b-df-hj-np-tv-z])","$10$2"],
+	["([b-df-hj-np-tv-z])a([^aeiou])","$14$2"],
+	["([b-df-hj-np-tv-z])e([^aeiou])","$13$2"],
+	["([b-df-hj-np-tv-z])i([^aeiou])","$11$2"],
+	["([b-df-hj-np-tv-z])o([^aeiou])","$10$2"],
+	["[s]+\\b","z"],
+	["\\bb","8"],
+	["/m3","/me"]
+];
+
+var ye_olde_words = [
+	["are","art"],
+	["you do","you dost"],
+	["do you","dost you"],
+	["does","dost"],
+	["here","hither"],
+	["has","hath"],
+	["had","hadst"],
+	["was","wast"],
+	["none","naught"],
+	["null","naught"],
+	["nil","naught"],
+	["will","shalt"],
+	["you","thou"],
+	["you","thee"],
+	["your","thine"],
+	["your","thy"],
+	["there","thither"],
+	["think","trow"],
+	["where","whiter"],
+	["(\\w+)([aeiou])([dkpt])","$1$2$3e"],
+	["(\\w+)([^aeiou][dkp]|sh|[^s]t)","$1$2e"],
+	["(\\w+)own","$1ewn"],
+	["the","ye olde"]
 ];
 
 var help = require("./help.json");
@@ -815,6 +894,23 @@ var command_list = [{
 	}
 },
 {
+	trigger : U("command: %s.",help.mode.syntax),
+	pattern : /^mode .+$/i,
+	reply   : function(from,to,input) {
+		var mode;
+		
+		mode = input.split("mode ")[1];
+		
+		if (orin(mode,["ye olde englishe","l33t h4x0r","normal"])) {
+			config.mode = mode;
+			
+			return U("entering %s mode",mode);
+		}
+		
+		return "invalid mode, dipswitch";
+	}
+},
+{
 	trigger : U("command: %s.",help.search.syntax),
 	pattern : /^search\s+.+/i,
 	reply   : function(from,to,input) {
@@ -832,7 +928,7 @@ var command_list = [{
 			param["term_" + i] = "%"+t+"%";
 		});
 		
-		query_search += " ) ";
+		query_search += " ) ORDER BY RAND() LIMIT 0,3";
 		
 		query(db,{
 			query : query_search,
@@ -1068,7 +1164,7 @@ function bot_init() {
 	}
 
 	function handle_message(from, to, message) {
-		var handled;
+		var chosen,handled,matched_list,out;
 		
 		state.last_evtime = moment();
 		
@@ -1089,21 +1185,29 @@ function bot_init() {
 		
 		state.last_message = message;
 		
+		matched_list = [];
+		
 		_.each(pattern_list,function(p) {
-			var m_message,out;
+			var m_message;
 			
 			m_message = message.match(p.pattern);
 			
 			if (!handled && m_message && state.last_pattern != p.pattern) {
-				state.last_pattern = p.pattern;
-				
-				out = rand_el(p.reply);
-				
-				send(to,from,out,m_message,p);
-				
-				handled = true;
+				matched_list.push([p,m_message]);
 			}
 		});
+		
+		if (!matched_list.length) return;
+		
+		chosen = rand_el(matched_list);
+		
+		state.last_pattern = chosen[0].pattern;
+		
+		out = rand_el(chosen[0].reply);
+		
+		send(to,from,out,chosen[1],chosen[0]);
+		
+		handled = true;
 	}
 	client.addListener("message",handle_message);
 

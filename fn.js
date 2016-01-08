@@ -18,6 +18,12 @@
 
 var util = require("util");
 
+function array(a) {
+	if (!isdef(a)) return [];
+	
+	return isarray(a) ? a : [a];
+}
+
 function bool(b) {
 	return (b === "false") ? false : Boolean(b);
 }
@@ -95,6 +101,10 @@ function log() {
 
 function lowerCase(s) {
 	return string(s).toLowerCase();
+}
+
+function orin(e,list) {
+	return array(list).indexOf(e) !== -1;
 }
 
 function rand(min,max) {
@@ -179,12 +189,12 @@ function query(db,q,cb) {
 
 function globalize(o) {
 	[
-		bool,fixed,float,int,safe_div,
+		array,bool,fixed,float,int,safe_div,
 		ifdef,
 		isarray,isdef,isfn,isobj,isstring,
 		lowerCase,string,upperCase,
 		delay,eighth,log,rand,rand_el,trace,U,
-		escape,query
+		escape,orin,query
 	].forEach(function(fn) {
 		o[fn.name] = fn;
 	});
