@@ -1292,7 +1292,9 @@ function bot_init() {
 	function handle_join(channel,nick,message) {
 		if (config.channels.indexOf(channel) !== 0) return;
 		
-		// if (nick == config.name) client.send("names",config.channels[0]);
+		if (nick == config.name) {
+			client.send("mode",nick,"+B");
+		}
 		
 		nick_add(nick);
 	}
