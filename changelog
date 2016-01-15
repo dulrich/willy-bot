@@ -6,6 +6,9 @@
 * random questions to names in channel
 * support multiple channels and queries properly
 
+# 2016-01-14 -- 1.4.2
+* ?diff_<list> syntax for unique replacements 
+
 # 2016-01-14 -- 1.4.1
 * command: joke
 * random jokes icndb.com/api

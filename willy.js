@@ -32,7 +32,7 @@ var config = require("./config.json");
 config.regex_command = new RegExp("^"+config.name+"\\b","i");
 config.bored_timeout = int(config.bored_timeout) || 5 * 60; // seconds
 config.verbosity = config.verbosity || 1.0;
-config.version = U("%s-bot-1.4.1",config.name);
+config.version = U("%s-bot-1.4.2",config.name);
 
 var question_answers = {};
 
@@ -59,7 +59,9 @@ var db = mysql.createConnection({
 	dateStrings : true
 });
 
-var lists = {};
+var lists = {
+	nick : []
+};
 var meta_lists = {
 	bored   : [],
 	nothing : [],
@@ -72,7 +74,6 @@ var pattern_list,pattern_map;
 pattern_list = [];
 pattern_map = {};
 
-var nick_list = [];
 var nick_pattern_index = -1;
 
 function load_lists(acb) {
@@ -269,8 +270,6 @@ function replace_tokens(str,from,m_match) {
 	out = out.replace(/\?from\b/g,from);
 	out = out.replace(/\?match\b/g,(m_match && m_match[0]) || "");
 	
-	out = out.replace(/\?rand_nick\b/g,randish_el(nick_list));
-	
 	rx_int = /\?(t)?rand_(int|eighth)([\d_]+)?/gi;
 	out = out.replace(rx_int,function(match,text,type,range) {
 		var min,max;
@@ -310,12 +309,31 @@ function replace_tokens(str,from,m_match) {
 	});
 	
 	_.each(lists,function(list,name) {
-		var rx_indef,rx_multi,rx_plain,rx_posses;
+		var diff_list,rx_diff,rx_indef,rx_multi,rx_plain,rx_posses;
 		
-		rx_indef = new RegExp("\\\?(c?)indef_"+name+"\\b(~[a-z]){0,}","gi");
-		rx_multi = new RegExp("\\\?(c?)multi_"+name+"\\b(~[a-z]){0,}","gi");
-		rx_plain = new RegExp("\\\?(c?)rand_"+name+"\\b(~[a-z]){0,}","gi");
+		rx_diff   = new RegExp("\\\?(c?)diff_"+name+"\\b(~[a-z]){0,}","gi");
+		rx_indef  = new RegExp("\\\?(c?)indef_"+name+"\\b(~[a-z]){0,}","gi");
+		rx_multi  = new RegExp("\\\?(c?)multi_"+name+"\\b(~[a-z]){0,}","gi");
+		rx_plain  = new RegExp("\\\?(c?)rand_"+name+"\\b(~[a-z]){0,}","gi");
 		rx_posses = new RegExp("\\\?(c?)posses_"+name+"\\b(~[a-z]){0,}","gi");
+		
+		diff_list = _.clone(list);
+		
+		out = out.replace(rx_diff,function(match,caps,tags) {
+			var val;
+			
+			if (diff_list.length) {
+				val = randish_el(diff_list);
+				diff_list = _.without(diff_list,val);
+			}
+			else {
+				val = randish_el(list);
+			}
+			
+			if (caps) val = upperCase(val);
+			
+			return val;
+		});
 		
 		out = out.replace(rx_indef,function(match,caps,tags) {
 			var val;
@@ -655,7 +673,7 @@ var command_list = [{
 	trigger : "random joke from icndb.com/api",
 	pattern : /^(tell a )?joke$/,
 	reply   : function(from,to,input) {
-		var name = rand_el([from].concat(nick_list));
+		var name = rand_el([from].concat(lists.nick));
 		
 		request({
 			uri : "http://api.icndb.com/jokes/random",
@@ -901,6 +919,10 @@ var command_list = [{
 		
 		if (!lists[list]) {
 			return "?from: sorry, that's not a valid list";
+		}
+		
+		if (list === "nick") {
+			return "?from: nick is a builtin list, you can't change it";
 		}
 		
 		items = input.replace(/^listadd \w+\s+/i,"").match(/("[^"]+"|\w+)/g);
@@ -1292,10 +1314,10 @@ function bot_init() {
 		
 		if (nick === config.name) return;
 		
-		nick_list.push(nick);
+		lists.nick.push(nick);
 		
-		nick_list = _.uniq(nick_list);
-		nick_pattern = nick_list.join("|");
+		lists.nick = _.uniq(lists.nick);
+		nick_pattern = lists.nick.join("|");
 		
 		if (nick_pattern_index === -1) {
 			nick_pattern_index = -1 + pattern_list.push({
@@ -1317,8 +1339,8 @@ function bot_init() {
 	function nick_remove(nick) {
 		var nick_pattern;
 		
-		nick_list = _.without(nick_list,nick_strip(nick));
-		nick_pattern = nick_list.join("|");
+		lists.nick = _.without(lists.nick,nick_strip(nick));
+		nick_pattern = lists.nick.join("|");
 		
 		if (nick_pattern_index !== -1) {
 			pattern_list[nick_pattern_index].pattern = new RegExp("\\b("+nick_pattern+")\\b","i");
