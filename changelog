@@ -4,8 +4,11 @@
 * implement op commands
 * xkcd references
 * random questions to names in channel
-* random jokes http://www.icndb.com/api/ http://api.icndb.com/jokes/random
 * support multiple channels and queries properly
+
+# 2016-01-14 -- 1.4.1
+* command: joke
+* random jokes icndb.com/api
 
 # 2016-01-07 -- 1.4.0
 * command: mode <mode>

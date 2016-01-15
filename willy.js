@@ -16,12 +16,14 @@
 
 /* jshint latedef: nofunc */
 
-var _ = require("lodash"),
-	A = require("async"),
-	irc = require("irc"),
-	moment = require("moment"),
-	mysql = require("mysql"),
-	num_to_str = require("./number_to_string.js");
+var
+	_          = require("lodash"),
+	A          = require("async"),
+	irc        = require("irc"),
+	moment     = require("moment"),
+	mysql      = require("mysql"),
+	num_to_str = require("./number_to_string.js"),
+	request    = require("request");
 
 require("./fn.js")(global);
 
@@ -30,7 +32,7 @@ var config = require("./config.json");
 config.regex_command = new RegExp("^"+config.name+"\\b","i");
 config.bored_timeout = int(config.bored_timeout) || 5 * 60; // seconds
 config.verbosity = config.verbosity || 1.0;
-config.version = U("%s-bot-1.4.0",config.name);
+config.version = U("%s-bot-1.4.1",config.name);
 
 var question_answers = {};
 
@@ -39,14 +41,14 @@ var client;
 var message_log = [];
 
 var state = {
-	last_action  : "",
-	last_message : "",
-	last_pattern : null,
-	last_repeat  : "",
+	last_action     : "",
+	last_message    : "",
+	last_pattern    : null,
+	last_repeat     : "",
 	last_boredcheck : moment(),
-	last_evtime  : moment(),
-	last_acttime : moment(),
-	next_rand    : null
+	last_evtime     : moment(),
+	last_acttime    : moment(),
+	next_rand       : null
 };
 
 var db = mysql.createConnection({
@@ -413,7 +415,7 @@ function replace_tokens(str,from,m_match) {
 			out = out.replace(pair.r3g3xp,pair.l33t);
 		});
 	}
-	else log(config.mode);
+	else log("MODE config.mode");
 	
 	return out;
 }
@@ -435,8 +437,11 @@ function send_raw(to,from,message,m_match,raw,trigger) {
 	if (out.match(/^\/me\s+/)) {
 		client.action(to,out.replace(/^\/me\s+/,""));
 	}
-	else {
+	else if (out) {
 		client.say(to,out);
+	}
+	else {
+		return;
 	}
 	
 	log("ISAID: " + out);
@@ -644,6 +649,46 @@ var command_list = [{
 		});
 		
 		return "?from: ?rand_assent";
+	}
+},
+{
+	trigger : "random joke from icndb.com/api",
+	pattern : /^(tell a )?joke$/,
+	reply   : function(from,to,input) {
+		var name = rand_el([from].concat(nick_list));
+		
+		request({
+			uri : "http://api.icndb.com/jokes/random",
+			qs  : {
+				escape    : "javascript",
+				firstName : name,
+				lastName  : name
+			}
+		},function(err,obj,res) {
+			var msg;
+			
+			if (err) return log(err);
+			
+			try {
+				res = JSON.parse(res);
+			}
+			catch (e) {
+				res = null;
+				log(e);
+			}
+			
+			msg = res && res.value && res.value.joke || "";
+			
+			if (!msg) return;
+			
+			msg = msg
+				.replace(U("%s %s'",name,name),U("%s's",name))
+				.replace(U("%s %s",name,name),name);
+			
+			send(to,from,msg,"","random joke from icndb.com/api");
+		});
+		
+		return "";
 	}
 },
 {

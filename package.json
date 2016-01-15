@@ -8,7 +8,8 @@
     "irc": "^0.4.0",
     "lodash": "^3.10.1",
     "moment": "^2.10.6",
-    "mysql": "^2.9.0"
+    "mysql": "^2.9.0",
+    "request": "^2.67.0"
   },
   "devDependencies": {},
   "scripts": {
