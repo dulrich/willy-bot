@@ -5,8 +5,12 @@ like wally and welly, but the next-gen
 
 # functionality
 
-* set pools of one or more potential responses based on channel or private messages
-* substitution patters (from,rand_noun,rand_verb,etc) in responses
+* respond to matched words (regex) in channel/query messages
+* substitution patterns (from,rand_noun,rand_verb,etc) in responses
+* basic, multiple, cap-cased, indefinite article, possessive, and unique substitutions
+* list management commands
+* inline replaces `?or_one_two_three` for minor lists
+* random numbers via `?rand_intX_Y`
 * have bot perform channel commands on request (mute,kick,etc) if it is an op
 
 
@@ -15,16 +19,27 @@ like wally and welly, but the next-gen
 * `sudo apt-get install libicu-dev` for `node-irc` dependency
 * `npm install`
 * copy `config.example.json` to `config.json` and insert your desired info
-* `node willy.js` or your choice of node daemonizers
+* `node willy.js` or your choice of node daemonizers (nodemon, forever, pm2, etc)
 
 
 # settings
 
-The foloowing settings are recognized by willy-bot in `config.json`
+The following settings are recognized by willy-bot in `config.json`
 
 * **name** (string,required): the bot's nick
 * **channels** (string array,required): list of channels for the bot to join
 * **server** (string,required): server the bot should connect to
+* **realName** (string,required): the nick of the bot owner
+* **userName** (string,required): the nick of the bot owner
+* **bored_timeout** (integer): inactivity time before bot says something random
+* **mode** (string): post-process test with rules (normal|ye olde englishe|l33t h4x0r)
+
+The following settings control the bot's database backend:
+
+* **db_host**
+* **db_name**
+* **db_user**
+* **db_pass**
 
 
 # license
