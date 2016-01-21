@@ -9,6 +9,7 @@
 
 * 2016-01-21 -- 1.4.3
 * fix bot death on db connection error
+* command: repeat to <#channel> message <message>
 
 # 2016-01-14 -- 1.4.2
 * ?diff_<list> syntax for unique replacements

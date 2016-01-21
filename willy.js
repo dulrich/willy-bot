@@ -71,6 +71,7 @@ db.on("error",function(err) {
 	
 	if (!err.fatal) return;
 	
+	if (db) db.end();
 	db = init_db();
 });
 
@@ -990,6 +991,30 @@ var command_list = [{
 		}
 		
 		return "invalid mode, dipswitch";
+	}
+},
+{
+	trigger : U("command: %s.",help.repeat.syntax),
+	pattern : /^repeat to (#\w+) message (.+)$/i,
+	reply   : function(from,to,input) {
+		var channel,match,message;
+		
+		match = input.match(/^repeat to (#\w+) message (.+)$/i);
+		
+		if (!match || !match[1] || !match[2]) {
+			return "?from: sorry, what?";
+		}
+		
+		channel = match[1];
+		message = match[2];
+		
+		if (!orin(channel,config.channels)) {
+			return "from: i don't go there";
+		}
+		
+		send(channel,from,message,input,"");
+		
+		return "";
 	}
 },
 {

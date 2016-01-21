@@ -52,6 +52,11 @@
 		"syntax" : "rand <list>",
 		"notes"  : ""
 	},
+	"repeat" : {
+		"use"    : "have a message repeated to another channel or query",
+		"syntax" : "repeat to <#channel> message <message>",
+		"notes"  : ""
+	},
 	"search" : {
 		"use"    : "look for patterns like <term>",
 		"syntax" : "search <term>+",
