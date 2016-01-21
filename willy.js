@@ -32,7 +32,7 @@ var config = require("./config.json");
 config.regex_command = new RegExp("^"+config.name+"\\b","i");
 config.bored_timeout = int(config.bored_timeout) || 5 * 60; // seconds
 config.verbosity = config.verbosity || 1.0;
-config.version = U("%s-bot-1.4.2",config.name);
+config.version = U("%s-bot-1.4.3",config.name);
 
 var question_answers = {};
 
@@ -51,12 +51,27 @@ var state = {
 	next_rand       : null
 };
 
-var db = mysql.createConnection({
-	host        : config.db_host,
-	database    : config.db_name,
-	user        : config.db_user,
-	password    : config.db_pass,
-	dateStrings : true
+var db;
+function init_db() {
+	return mysql.createConnection({
+		host        : config.db_host,
+		database    : config.db_name,
+		user        : config.db_user,
+		password    : config.db_pass,
+		dateStrings : true
+	});
+}
+
+db = init_db();
+
+db.on("error",function(err) {
+	if (err.code === "PROTOCOL_ENQUEUE_AFTER_FATAL_ERROR") {
+		err.fatal = true;
+	}
+	
+	if (!err.fatal) return;
+	
+	db = init_db();
 });
 
 var lists = {

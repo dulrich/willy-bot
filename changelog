@@ -5,9 +5,13 @@
 * xkcd references
 * random questions to names in channel
 * support multiple channels and queries properly
+* https://en.wikipedia.org/w/api.php?action=query&list=random&rnlimit=1&rnnamespace=0&format=json&prop=info&inprop=url
+
+* 2016-01-21 -- 1.4.3
+* fix bot death on db connection error
 
 # 2016-01-14 -- 1.4.2
-* ?diff_<list> syntax for unique replacements 
+* ?diff_<list> syntax for unique replacements
 
 # 2016-01-14 -- 1.4.1
 * command: joke
