@@ -454,7 +454,7 @@ function replace_tokens(str,from,m_match) {
 	return out;
 }
 
-function send_raw(to,from,message,m_match,raw,trigger) {
+function send_raw(to,from,message,m_match,raw,trigger,verbosity) {
 	var out;
 	
 	out = message;
@@ -463,7 +463,7 @@ function send_raw(to,from,message,m_match,raw,trigger) {
 		out = replace_tokens(out,from,m_match);
 	}
 	
-	if (Math.random() > config.verbosity) {
+	if (Math.random() > Math.max(config.verbosity,float(verbosity))) {
 		log("VERBOSITY LIMITED");
 		return;
 	}
@@ -497,7 +497,7 @@ function send_raw(to,from,message,m_match,raw,trigger) {
 	});
 }
 
-function send(to,from,message,m_match,trigger) {
+function send(to,from,message,m_match,trigger,verbosity) {
 	var raw;
 	
 	message = string(message);
@@ -508,7 +508,7 @@ function send(to,from,message,m_match,trigger) {
 		raw = true;
 	}
 	
-	send_raw(to,from,message,m_match,raw,trigger);
+	send_raw(to,from,message,m_match,raw,trigger,verbosity);
 }
 
 function act_bored() {
@@ -586,9 +586,10 @@ var ye_olde_words = [
 var help = require("./help.json");
 
 var command_list = [{
-	trigger : U("command: %s.",help.help.syntax),
-	pattern : /^help(\s+\w+)?$/i,
-	reply   : function(from,to,input) {
+	trigger   : U("command: %s.",help.help.syntax),
+	pattern   : /^help(\s+\w+)?$/i,
+	verbosity : 1,
+	reply     : function(from,to,input) {
 		var match,name,reply,rx_match;
 		
 		rx_match = /^help\s+(\w+)?$/i;
@@ -617,16 +618,17 @@ var command_list = [{
 		}
 		
 		_.chain(reply).flatten().each(function(line) {
-			send(to,from,line,input,U("command: %s",help.help.syntax));
+			send(to,from,line,input,U("command: %s",help.help.syntax),1);
 		}).value();
 		
 		return "if that doesn't help you, then nothing can";
 	}
 },
 {
-	trigger : U("command: %s.",help.listshow.syntax),
-	pattern : /^listshow$/i,
-	reply   : function(from,to,input) {
+	trigger   : U("command: %s.",help.listshow.syntax),
+	pattern   : /^listshow$/i,
+	verbosity : 1,
+	reply     : function(from,to,input) {
 		var out;
 		
 		out = _.map(lists,function(list,name) {
@@ -637,9 +639,10 @@ var command_list = [{
 	}
 },
 {
-	trigger : U("command: %s.",help.listshow.syntax),
-	pattern : /^listshow \w+$/i,
-	reply   : function(from,to,input) {
+	trigger   : U("command: %s.",help.listshow.syntax),
+	pattern   : /^listshow \w+$/i,
+	verbosity : 1,
+	reply     : function(from,to,input) {
 		var list,out;
 		
 		list = input.split(" ")[1];
@@ -654,9 +657,10 @@ var command_list = [{
 	}
 },
 {
-	trigger : U("command: %s.",help.listcreate.syntax),
-	pattern : /^listcreate \w+$/i,
-	reply   : function(from,to,input) {
+	trigger   : U("command: %s.",help.listcreate.syntax),
+	pattern   : /^listcreate \w+$/i,
+	verbosity : 1,
+	reply     : function(from,to,input) {
 		var list,query_list;
 		
 		list = input.split(" ")[1];
@@ -686,9 +690,10 @@ var command_list = [{
 	}
 },
 {
-	trigger : "random joke from icndb.com/api",
-	pattern : /^(tell a )?joke$/,
-	reply   : function(from,to,input) {
+	trigger   : "random joke from icndb.com/api",
+	pattern   : /^(tell a )?joke$/,
+	verbosity : 1,
+	reply     : function(from,to,input) {
 		var name = rand_el([from].concat(lists.nick));
 		
 		request({
@@ -719,16 +724,17 @@ var command_list = [{
 				.replace(U("%s %s'",name,name),U("%s's",name))
 				.replace(U("%s %s",name,name),name);
 			
-			send(to,from,msg,"","random joke from icndb.com/api");
+			send(to,from,msg,"","random joke from icndb.com/api",1);
 		});
 		
 		return "";
 	}
 },
 {
-	trigger : U("command: %s.",help.match.syntax),
-	pattern : /^match \/.+\/ reply .+$/i,
-	reply   : function(from,to,input) {
+	trigger   : U("command: %s.",help.match.syntax),
+	pattern   : /^match \/.+\/ reply .+$/i,
+	verbosity : 1,
+	reply     : function(from,to,input) {
 		var match,param_pattern,pattern,query_pattern,reply,rx_match;
 		
 		rx_match = /^match \/(.+)\/ reply (.+)$/i;
@@ -775,9 +781,10 @@ var command_list = [{
 	}
 },
 {
-	trigger : U("command: %s.",help.question.syntax),
-	pattern : /^question \w+ reply .+$/i,
-	reply   : function(from,to,input) {
+	trigger   : U("command: %s.",help.question.syntax),
+	pattern   : /^question \w+ reply .+$/i,
+	verbosity : 1,
+	reply     : function(from,to,input) {
 		var match,param_answer,query_answer,reply,rx_match,list;
 		
 		rx_match = /^question (\w+) reply (.+)$/i;
@@ -823,9 +830,10 @@ var command_list = [{
 	}
 },
 {
-	trigger : U("command: %s.",help.meta.syntax),
-	pattern : /^if (bored|nothing|repeat|secret) reply (.+)$/i,
-	reply   : function(from,to,input) {
+	trigger   : U("command: %s.",help.meta.syntax),
+	pattern   : /^if (bored|nothing|repeat|secret) reply (.+)$/i,
+	verbosity : 1,
+	reply     : function(from,to,input) {
 		var match,meta,param_meta,query_meta,reply,rx_match;
 		
 		rx_match = /^if (bored|nothing|repeat|secret) reply (.+)$/i;
@@ -869,14 +877,16 @@ var command_list = [{
 	}
 },
 {
-	trigger : U("command: %s.",help.match.syntax),
-	pattern : /^match/i,
-	reply   : ["?from, did you mean: " + help.match.syntax]
+	trigger   : U("command: %s.",help.match.syntax),
+	pattern   : /^match/i,
+	verbosity : 1,
+	reply     : ["?from, did you mean: " + help.match.syntax]
 },
 {
-	trigger : U("command: %s.",help.pattern.syntax),
-	pattern : /^pattern \w+$/i,
-	reply   : function(from,to,input) {
+	trigger   : U("command: %s.",help.pattern.syntax),
+	pattern   : /^pattern \w+$/i,
+	verbosity : 1,
+	reply     : function(from,to,input) {
 		var cmd,count_pattern,count_reply,patt_l,patt_s,stat_l,stat_s;
 		
 		cmd = input.split(" ")[1];
@@ -926,9 +936,10 @@ var command_list = [{
 	}
 },
 {
-	trigger : U("command: %s.",help.listadd.syntax),
-	pattern : /^listadd \w+\s+(\w+|"[^"]+")+/i,
-	reply   : function(from,to,input) {
+	trigger   : U("command: %s.",help.listadd.syntax),
+	pattern   : /^listadd \w+\s+(\w+|"[^"]+")+/i,
+	verbosity : 1,
+	reply     : function(from,to,input) {
 		var items,list,param_item,query_item;
 		
 		list = input.split(" ")[1];
@@ -977,9 +988,10 @@ var command_list = [{
 	}
 },
 {
-	trigger : U("command: %s.",help.mode.syntax),
-	pattern : /^mode .+$/i,
-	reply   : function(from,to,input) {
+	trigger   : U("command: %s.",help.mode.syntax),
+	pattern   : /^mode .+$/i,
+	verbosity : 1,
+	reply     : function(from,to,input) {
 		var mode;
 		
 		mode = input.split("mode ")[1];
@@ -994,9 +1006,10 @@ var command_list = [{
 	}
 },
 {
-	trigger : U("command: %s.",help.repeat.syntax),
-	pattern : /^repeat to (#\w+) message (.+)$/i,
-	reply   : function(from,to,input) {
+	trigger   : U("command: %s.",help.repeat.syntax),
+	pattern   : /^repeat to (#\w+) message (.+)$/i,
+	verbosity : 1,
+	reply     : function(from,to,input) {
 		var channel,match,message;
 		
 		match = input.match(/^repeat to (#\w+) message (.+)$/i);
@@ -1012,15 +1025,16 @@ var command_list = [{
 			return "from: i don't go there";
 		}
 		
-		send(channel,from,message,input,"");
+		send(channel,from,message,input,"",1);
 		
 		return "";
 	}
 },
 {
-	trigger : U("command: %s.",help.search.syntax),
-	pattern : /^search\s+.+/i,
-	reply   : function(from,to,input) {
+	trigger   : U("command: %s.",help.search.syntax),
+	pattern   : /^search\s+.+/i,
+	verbosity : 1,
+	reply     : function(from,to,input) {
 		var param,query_search,term,terms;
 		
 		term = input.replace(/^search\s+/i,"");
@@ -1048,7 +1062,8 @@ var command_list = [{
 				from,
 				U("found %d patterns for %s",res.length,term),
 				input,
-				U("command: %s",help.search.syntax)
+				U("command: %s",help.search.syntax),
+				1
 			);
 			
 			_.each(res,function(row) {
@@ -1058,7 +1073,8 @@ var command_list = [{
 					U("%s: /%s/ reply %s",row.PatternNick,row.PatternRegExp,row.PatternReply),
 					input,
 					true,
-					U("command: %s",help.search.syntax)
+					U("command: %s",help.search.syntax),
+					1
 				);
 			});
 		});
@@ -1067,9 +1083,10 @@ var command_list = [{
 	}
 },
 {
-	trigger : U("command: %s.","leave"),
-	pattern : /(get out|leave)/i,
-	reply  : function(from,to,input) {
+	trigger   : U("command: %s.","leave"),
+	pattern   : /(get out|leave)/i,
+	verbosity : 1,
+	reply     : function(from,to,input) {
 		var partings = [
 			"ok ?from, i'm out",
 			"/me ?rand_action",
@@ -1082,16 +1099,18 @@ var command_list = [{
 	}
 },
 {
-	pattern : /(go die|kill you)/i,
-	reply  : function(from,to,input) {
+	pattern   : /(go die|kill you)/i,
+	verbosity : 1,
+	reply     : function(from,to,input) {
 		delay(process.exit,null,[],100);
 		
 		return "/me commits suicide with ?indef_noun";
 	}
 },
 {
-	pattern : /^(time|got the time\??|what time is it\??)/i,
-	reply   : function(from,to,input) {
+	pattern   : /^(time|got the time\??|what time is it\??)/i,
+	verbosity : 1,
+	reply     : function(from,to,input) {
 		var times = [
 			"?from: it's " + moment().format("llll") + " here",
 			"?from: tomorrow is " + moment().to(moment().endOf("day")),
@@ -1102,18 +1121,20 @@ var command_list = [{
 	}
 },
 {
-	trigger : U("command: %s.",help.version.syntax),
-	pattern : /(who are you|version)/i,
-	reply   : [
+	trigger   : U("command: %s.",help.version.syntax),
+	pattern   : /(who are you|version)/i,
+	verbosity : 1,
+	reply     : [
 		"?version at your service",
 		"?version reporting for duty",
 		"?version build ?rand_int100000_600000"
 	]
 },
 {
-	trigger : U("command: %s.",help.rand.syntax),
-	pattern : /^rand \w+$/i,
-	reply   : function(to,from,input) {
+	trigger   : U("command: %s.",help.rand.syntax),
+	pattern   : /^rand \w+$/i,
+	verbosity : 1,
+	reply     : function(to,from,input) {
 		var list;
 		
 		list = input.split(" ")[1];
@@ -1129,9 +1150,10 @@ var command_list = [{
 	}
 },
 {
-	trigger : U("command: %s.",help.setrand.syntax),
-	pattern : /^setrand \d+$/,
-	reply   : function(to,from,input) {
+	trigger   : U("command: %s.",help.setrand.syntax),
+	pattern   : /^setrand \d+$/,
+	verbosity : 1,
+	reply     : function(to,from,input) {
 		var next_rand;
 		
 		next_rand = int(input.split(" ")[1]);
@@ -1143,9 +1165,10 @@ var command_list = [{
 	}
 },
 {
-	trigger : "meta-loop",
-	pattern : /^what was that\?/i,
-	reply   : function(to,from,input) {
+	trigger   : "meta-loop",
+	pattern   : /^what was that\?/i,
+	verbosity : 1,
+	reply     : function(to,from,input) {
 		var last;
 		
 		last = message_log[message_log.length - 1];
@@ -1174,6 +1197,7 @@ var command_list = [{
 },
 {
 	pattern : /(tell|make)\s/i,
+	verbosity : 1,
 	reply   : function(from,to,input) {
 		var match,out,rx;
 		
@@ -1254,7 +1278,7 @@ function bot_init() {
 			if (isfn(c.reply)) out = c.reply(from,to,input);
 			else out = rand_el(c.reply);
 			
-			send(to,from,out,m_command,c.trigger||null);
+			send(to,from,out,m_command,c.trigger||null,c.verbosity);
 		});
 		
 		return handled;
