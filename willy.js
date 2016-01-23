@@ -1196,7 +1196,7 @@ var command_list = [{
 	reply   : meta_lists.secret
 },
 {
-	pattern : /(tell|make)\s/i,
+	pattern : /^(tell|make)\s/i,
 	verbosity : 1,
 	reply   : function(from,to,input) {
 		var match,out,rx;
