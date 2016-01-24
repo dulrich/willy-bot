@@ -48,7 +48,8 @@ var state = {
 	last_boredcheck : moment(),
 	last_evtime     : moment(),
 	last_acttime    : moment(),
-	next_rand       : null
+	next_rand       : null,
+	quiet_time      : {}
 };
 
 var db;
@@ -465,6 +466,11 @@ function send_raw(to,from,message,m_match,raw,trigger,verbosity) {
 	
 	if (Math.random() > Math.max(config.verbosity,float(verbosity))) {
 		log("VERBOSITY LIMITED");
+		return;
+	}
+	
+	if (state.quiet_time[to] && moment().isBefore(state.quiet_time[to])) {
+		log("QUIET TIME");
 		return;
 	}
 	
@@ -1096,6 +1102,15 @@ var command_list = [{
 		delay(client.part,client,[to],100);
 		
 		return rand_el(partings);
+	}
+},
+{
+	pattern   : /\b(shut up|mute)\b/i,
+	verbosity : 1,
+	reply     : function(from,to,input) {
+		state.quiet_time[to] = moment().add(5,"minute");
+		
+		return "";
 	}
 },
 {
