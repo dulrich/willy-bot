@@ -31,8 +31,9 @@ var config = require("./config.json");
 
 config.regex_command = new RegExp("^"+config.name+"\\b","i");
 config.bored_timeout = int(config.bored_timeout) || 5 * 60; // seconds
+config.quiet_time = int(config.quiet_time) || 5;
 config.verbosity = config.verbosity || 1.0;
-config.version = U("%s-bot-1.4.3",config.name);
+config.version = U("%s-bot-1.4.4",config.name);
 
 var question_answers = {};
 
@@ -1105,12 +1106,25 @@ var command_list = [{
 	}
 },
 {
-	pattern   : /\b(shut up|mute)\b/i,
+	trigger   : U("command: %s.",help.mute.syntax),
+	pattern   : /^mute( \d+)?$/i,
 	verbosity : 1,
 	reply     : function(from,to,input) {
-		state.quiet_time[to] = moment().add(5,"minute");
+		var length = int(input.split(" ")[1]) || config.mute_length;
+		
+		state.quiet_time[to] = moment().add(length,"minute");
 		
 		return "";
+	}
+},
+{
+	trigger   : U("command: %s.",help.unmute.syntax),
+	pattern   : /^unmute$/i,
+	verbosity : 1,
+	reply     : function(from,to,input) {
+		state.quiet_time[to] = moment();
+		
+		return "HI ?from!!!";
 	}
 },
 {
