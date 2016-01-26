@@ -7,6 +7,9 @@
 * support multiple channels and queries properly
 * https://en.wikipedia.org/w/api.php?action=query&list=random&rnlimit=1&rnnamespace=0&format=json&prop=info&inprop=url
 
+* 2016-01-26 -- 1.4.5
+* command: verbosity X.XY
+
 * 2016-01-23 -- 1.4.4
 * command: mute <minutes>
 * command: unmute

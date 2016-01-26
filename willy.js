@@ -33,7 +33,7 @@ config.regex_command = new RegExp("^"+config.name+"\\b","i");
 config.bored_timeout = int(config.bored_timeout) || 5 * 60; // seconds
 config.quiet_time = int(config.quiet_time) || 5;
 config.verbosity = config.verbosity || 1.0;
-config.version = U("%s-bot-1.4.4",config.name);
+config.version = U("%s-bot-1.4.5",config.name);
 
 var question_answers = {};
 
@@ -731,7 +731,7 @@ var command_list = [{
 				.replace(U("%s %s'",name,name),U("%s's",name))
 				.replace(U("%s %s",name,name),name);
 			
-			send(to,from,msg,"","random joke from icndb.com/api",1);
+			send(to,from,msg,"",false,"random joke from icndb.com/api",1);
 		});
 		
 		return "";
@@ -1126,6 +1126,22 @@ var command_list = [{
 		
 		return "HI ?from!!!";
 	}
+},
+{
+	trigger   : U("command: %s.",help.verbosity.syntax),
+	pattern   : /^verbosity \d.\d\d?$/i,
+	verbosity : 1,
+	reply     : function(from,to,input) {
+		config.verbosity = float(input.split(" ")[1])
+		
+		return "?rand_assent";
+	}
+},
+{
+	trigger   : U("command: %s.",help.verbosity.syntax),
+	pattern   : /^verbosity/i,
+	verbosity : 1,
+	reply     : "?from: i'll consider it if you give me a valid number"
 },
 {
 	pattern   : /(go die|kill you)/i,

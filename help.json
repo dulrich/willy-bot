@@ -77,6 +77,11 @@
 		"syntax" : "unmute",
 		"notes"  : ""
 	},
+	"verbosity" : {
+		"use"    : "set verbosity to <float> with 1 or 2 digits of precision",
+		"syntax" : "verbosity X.XY",
+		"notes"  : ""
+	},
 	"version" : {
 		"use"    : "get version info for ?version",
 		"syntax" : "version",
