@@ -728,8 +728,9 @@ var command_list = [{
 			if (!msg) return;
 			
 			msg = msg
-				.replace(U("%s %s'",name,name),U("%s's",name))
-				.replace(U("%s %s",name,name),name);
+				.replace(new RegExp(U("%s %s'",name,name),"g"),U("%s's",name))
+				.replace(new RegExp(U("%s %s",name,name),"g"),name)
+				.replace(new RegExp(U("%s%s",name,name),"g"),name);
 			
 			send(to,from,msg,"",false,"random joke from icndb.com/api",1);
 		});
