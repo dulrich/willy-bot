@@ -286,7 +286,10 @@ function replace_tokens(str,from,m_match) {
 	out = str;
 	
 	out = out.replace(/\?from\b/g,from);
-	out = out.replace(/\?match\b/g,(m_match && m_match[0]) || "");
+	out = out.replace(/\?match0?\b/g,(m_match && m_match[0]) || "");
+	out = out.replace(/\?match1\b/g,(m_match && m_match[1]) || "");
+	out = out.replace(/\?match2\b/g,(m_match && m_match[2]) || "");
+	out = out.replace(/\?match3\b/g,(m_match && m_match[3]) || "");
 	
 	rx_int = /\?(t)?rand_(int|eighth)([\d_]+)?/gi;
 	out = out.replace(rx_int,function(match,text,type,range) {
@@ -1133,7 +1136,7 @@ var command_list = [{
 	pattern   : /^verbosity \d.\d\d?$/i,
 	verbosity : 1,
 	reply     : function(from,to,input) {
-		config.verbosity = float(input.split(" ")[1])
+		config.verbosity = float(input.split(" ")[1]);
 		
 		return "?rand_assent";
 	}
@@ -1433,16 +1436,16 @@ function bot_init() {
 			nick_pattern_index = -1 + pattern_list.push({
 				trigger : "builtin: <nick> reply <abuse>",
 				builtin : true,
-				pattern : new RegExp("\\b("+nick_pattern+")\\b","i"),
+				pattern : new RegExp(".\\b("+nick_pattern+")\\b","i"),
 				reply   : [
-					"?match is a ?or_punk_jerk_loser",
-					"this one time i hooked up with ?match's ?rand_person",
-					"?match!!!"
+					"?match1 is a ?or_punk_jerk_loser",
+					"this one time i hooked up with ?match1's ?rand_person",
+					"?match1!!!"
 				]
 			});
 		}
 		else {
-			pattern_list[nick_pattern_index].pattern = new RegExp("\\b("+nick_pattern+")\\b","i");
+			pattern_list[nick_pattern_index].pattern = new RegExp(".\\b("+nick_pattern+")\\b","i");
 		}
 	}
 
