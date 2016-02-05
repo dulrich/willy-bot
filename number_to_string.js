@@ -2,8 +2,8 @@ var text;
 
 text = {
 	digits : ["zero", "one", 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'],
-	teens  : ["ten","eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen"],
-	tens   : ["ten","twenty","thirty","forty","fifty","sixty","seventy","eighty","ninety"]
+	teens  : ["","ten","eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen"],
+	tens   : ["","ten","twenty","thirty","forty","fifty","sixty","seventy","eighty","ninety"]
 };
 
 var scales = [{
@@ -54,7 +54,9 @@ function num_to_str(num) {
 	var out;
 	
 	out = [];
-	log("num",num);
+	
+	log("NUM",num);
+	
 	if (num === 0) return "zero";
 	
 	scales.forEach(function(scale) {
