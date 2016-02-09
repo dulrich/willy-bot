@@ -82,6 +82,7 @@ var lists = {
 };
 var meta_lists = {
 	bored   : [],
+	nick    : [],
 	nothing : [],
 	repeat  : [],
 	secret  : []
@@ -379,6 +380,7 @@ function replace_tokens(str,from,m_match) {
 			
 			val = val.replace(/y$/i,"ies");
 			val = val.replace(/sh$/i,"shes");
+			val = val.replace(/ife$/i,"ives");
 			val = val.replace(/([^s])$/i,"$1s");
 			
 			return val;
@@ -842,12 +844,12 @@ var command_list = [{
 },
 {
 	trigger   : U("command: %s.",help.meta.syntax),
-	pattern   : /^if (bored|nothing|repeat|secret) reply (.+)$/i,
+	pattern   : /^if (bored|nick|nothing|repeat|secret) reply (.+)$/i,
 	verbosity : 1,
 	reply     : function(from,to,input) {
 		var match,meta,param_meta,query_meta,reply,rx_match;
 		
-		rx_match = /^if (bored|nothing|repeat|secret) reply (.+)$/i;
+		rx_match = /^if (bored|nick|nothing|repeat|secret) reply (.+)$/i;
 		
 		match = rx_match.exec(input);
 		
@@ -1181,21 +1183,22 @@ var command_list = [{
 },
 {
 	trigger   : U("command: %s.",help.rand.syntax),
-	pattern   : /^rand \w+$/i,
+	pattern   : /^(indef|multi|rand) \w+$/i,
 	verbosity : 1,
 	reply     : function(to,from,input) {
-		var list;
+		var form,list;
 		
+		form = input.split(" ")[0];
 		list = input.split(" ")[1];
 		
-		if (list === "eighth") return "?rand_eighth1_16";
-		else if (list === "int") return "?rand_int1_100";
+		if (form === "rand" && list === "eighth") return "?rand_eighth1_16";
+		else if (form === "rand" && list === "int") return "?rand_int1_100";
 		
 		if (!lists[list]) {
 			return "tofu";
 		}
 		
-		return U("?rand_%s",list);
+		return U("?%s_%s",form,list);
 	}
 },
 {
@@ -1279,6 +1282,9 @@ var command_list = [{
 		}
 		else if (input.match(/\bwhen\b/i)) {
 			answer = "?rand_q_time";
+		}
+		else if (input.match(/\bwhere\b/i)) {
+			answer = "?rand_q_location";
 		}
 		else if (input.match(/\bwhy\b/i)) {
 			answer = "?rand_q_reason";
@@ -1437,11 +1443,7 @@ function bot_init() {
 				trigger : "builtin: <nick> reply <abuse>",
 				builtin : true,
 				pattern : new RegExp(".\\b("+nick_pattern+")\\b","i"),
-				reply   : [
-					"?match1 is a ?or_punk_jerk_loser",
-					"this one time i hooked up with ?match1's ?rand_person",
-					"?match1!!!"
-				]
+				reply   : meta_lists.nick
 			});
 		}
 		else {

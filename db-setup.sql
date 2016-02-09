@@ -237,7 +237,8 @@ INSERT IGNORE INTO wb_meta_list (MetaListID,MetaListName) VALUES
 	(1,'repeat'),
 	(2,'bored'),
 	(3,'secret'),
-	(4,'nothing');
+	(4,'nothing'),
+	(5,'nick');
 
 INSERT IGNORE INTO wb_meta_item (MetaListID,MetaReply,MetaNick) VALUES
 	(1,'?from, do you know how to read?','avid'),
@@ -279,6 +280,10 @@ INSERT IGNORE INTO wb_meta_item (MetaListID,MetaReply,MetaNick) VALUES
 	(4,'do you even have a ?rand_bodypart?','avid'),
 	(4,'i''ve got nothing left to do but ?rand_action','avid');
 
+INSERT IGNORE INTO wb_meta_item (MetaListID,MetaReply,MetaNick) VALUES
+	(5,'?match1 is a ?or_punk_jerk_loser','avid'),
+	(5,'this one time i hooked up with ?match1''s ?rand_person','avid'),
+	(5,'?match1!!!','avid');
 
 CREATE TABLE IF NOT EXISTS wb_answer_list (
 	AnswerListID INT NOT NULL AUTO_INCREMENT PRIMARY KEY,

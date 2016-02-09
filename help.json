@@ -30,7 +30,7 @@
 	"meta" : {
 		"use"    : "add a new reply to <meta-list>",
 		"syntax" : "if <meta-list> reply <reply>",
-		"notes"  : "* meta-lists are bored, nothing, repeat, and secret"
+		"notes"  : "* meta-lists are bored, nick, nothing, repeat, and secret"
 	},
 	"mode" : {
 		"use"    : "switch bot to <mode>",
