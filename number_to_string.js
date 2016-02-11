@@ -2,7 +2,7 @@ var text;
 
 text = {
 	digits : ["zero", "one", 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'],
-	teens  : ["","ten","eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen"],
+	teens  : ["ten","eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen"],
 	tens   : ["","ten","twenty","thirty","forty","fifty","sixty","seventy","eighty","ninety"]
 };
 
@@ -32,8 +32,8 @@ function part_text(num) {
 	
 	if (num === 0) return "";
 	
-	if (num > 10 && num < 20) {
-		return text.teens[num];
+	if (num >= 10 && num < 20) {
+		return text.teens[num - 10];
 	}
 	else if (num > 99) {
 		temp = part_text(num % 100);
