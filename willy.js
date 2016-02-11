@@ -286,6 +286,16 @@ function replace_tokens(str,from,m_match) {
 	
 	out = str;
 	
+	_.each(question_answers,function(list,name) {
+		var rx_plain;
+		
+		rx_plain = new RegExp("\\\?rand_q_"+name+"\\b","i");
+		
+		while(out.match(rx_plain)) {
+			out = out.replace(rx_plain,randish_el(list));
+		}
+	});
+	
 	out = out.replace(/\?from\b/g,from);
 	out = out.replace(/\?match0?\b/g,(m_match && m_match[0]) || "");
 	out = out.replace(/\?match1\b/g,(m_match && m_match[1]) || "");
@@ -317,16 +327,6 @@ function replace_tokens(str,from,m_match) {
 		}
 		else {
 			return rand(min,max);
-		}
-	});
-	
-	_.each(question_answers,function(list,name) {
-		var rx_plain;
-		
-		rx_plain = new RegExp("\\\?rand_q_"+name+"\\b","i");
-		
-		while(out.match(rx_plain)) {
-			out = out.replace(rx_plain,randish_el(list));
 		}
 	});
 	
