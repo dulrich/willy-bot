@@ -14,6 +14,11 @@
 		"syntax" : "listcreate <list>",
 		"notes"  : "* list is normally singular, 'animal' not 'animals'"
 	},
+	"listsearch"  : {
+		"use"    : "search lists for <term>",
+		"syntax" : "listsearch <term>",
+		"notes"  : ""
+	},
 	"listshow"  : {
 		"use"    : "display existing lists with item counts, or display the items in <list>",
 		"syntax" : "listshow | listshow <list>",

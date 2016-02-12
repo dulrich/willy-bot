@@ -33,7 +33,7 @@ config.regex_command = new RegExp("^"+config.name+"\\b","i");
 config.bored_timeout = int(config.bored_timeout) || 5 * 60; // seconds
 config.quiet_time = int(config.quiet_time) || 5;
 config.verbosity = config.verbosity || 1.0;
-config.version = U("%s-bot-1.4.5",config.name);
+config.version = U("%s-bot-1.4.6",config.name);
 
 var question_answers = {};
 
@@ -635,6 +635,38 @@ var command_list = [{
 		
 		return "if that doesn't help you, then nothing can";
 	}
+},
+{
+	trigger   : U("command: %s.",help.listsearch.syntax),
+	pattern   : /^listsearch (\w+)$/i,
+	verbosity : 1,
+	reply     : function(from,to,input) {
+		var out,term;
+		
+		term = input.split(" ")[1];
+		
+		out = [];
+		
+		_.each(lists,function(list,name) {
+			if (name.indexOf(term) !== -1) {
+				out.push(U("list name: %s",name));
+			}
+			
+			_.each(list,function(item) {
+				if (item.indexOf(term) !== -1) {
+					out.push(U("%s term: %s",name,item));
+				}
+			});
+		});
+		
+		return out;
+	}
+},
+{
+	trigger   : U("command: %s.",help.listsearch.syntax),
+	pattern   : /^listsearch/i,
+	verbosity : 1,
+	reply     : "that's not a valid search term"
 },
 {
 	trigger   : U("command: %s.",help.listshow.syntax),

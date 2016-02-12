@@ -7,6 +7,9 @@
 * support multiple channels and queries properly
 * https://en.wikipedia.org/w/api.php?action=query&list=random&rnlimit=1&rnnamespace=0&format=json&prop=info&inprop=url
 
+* 2016-02-12 -- 1.4.6
+* command: listsearch <term>
+
 * 2016-01-26 -- 1.4.5
 * command: verbosity X.XY
 
