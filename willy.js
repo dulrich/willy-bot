@@ -1234,7 +1234,7 @@ var command_list = [{
 		}
 		
 		if (isstring(last.trigger) || last.trigger.builtin) {
-			return U("that was %s",last.trigger.trigger);
+			return U("that was %s",last.trigger.trigger || last.trigger);
 		}
 		
 		return U("/raw that was %s: /%s/ reply %s",
