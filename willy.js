@@ -33,7 +33,7 @@ config.regex_command = new RegExp("^"+config.name+"\\b","i");
 config.bored_timeout = int(config.bored_timeout) || 5 * 60; // seconds
 config.quiet_time = int(config.quiet_time) || 5;
 config.verbosity = config.verbosity || 1.0;
-config.version = U("%s-bot-1.4.6",config.name);
+config.version = U("%s-bot-1.5.0",config.name);
 
 var question_answers = {};
 
@@ -80,6 +80,7 @@ db.on("error",function(err) {
 var lists = {
 	nick : []
 };
+var lists_regex = {};
 var meta_lists = {
 	bored   : [],
 	nick    : [],
@@ -164,14 +165,26 @@ function load_meta(acb) {
 }
 
 function create_pattern(pattern,reply,nick) {
-	var index;
+	var index,raw;
 	
-	pattern_map[pattern] = pattern_map[pattern] || pattern_list.length;
+	raw = pattern;
 	
-	index = pattern_map[pattern];
+	pattern_map[raw] = pattern_map[raw] || pattern_list.length;
+	
+	index = pattern_map[raw];
+	
+	pattern = raw.replace(/%(\w+)%/g,function(match,list) {
+		log(match);
+		
+		if (isndef(lists[list])) return match[0];
+		
+		lists_regex[list] = lists_regex[list] || lists[list].join("|");
+		
+		return U("(%s)",lists_regex[list]);
+	});
 	
 	pattern_list[index] = pattern_list[index] || {
-		trigger : pattern,
+		trigger : raw,
 		pattern : new RegExp("\\b"+pattern+"\\b","i"),
 		reply   : [],
 		nick    : nick

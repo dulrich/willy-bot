@@ -18,6 +18,7 @@
 		"isdef"     : false,
 		"isfn"      : false,
 		"isobj"     : false,
+		"isndef"    : false,
 		"isstring"  : false,
 		"log"       : false,
 		"lowerCase" : false,

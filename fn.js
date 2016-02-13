@@ -87,6 +87,10 @@ function isfn(f) {
 	return typeof f === "function";
 }
 
+function isndef(v) {
+	return v === null || typeof v === "undefined";
+}
+
 function isobj(o) {
 	return typeof o === "object";
 }
@@ -191,7 +195,7 @@ function globalize(o) {
 	[
 		array,bool,fixed,float,int,safe_div,
 		ifdef,
-		isarray,isdef,isfn,isobj,isstring,
+		isarray,isdef,isfn,isndef,isobj,isstring,
 		lowerCase,string,upperCase,
 		delay,eighth,log,rand,rand_el,trace,U,
 		escape,orin,query
