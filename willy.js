@@ -391,7 +391,7 @@ function replace_tokens(str,from,m_match) {
 			
 			if (caps) val = upperCase(val);
 			
-			val = val.replace(/y$/i,"ies");
+			val = val.replace(/([^aeiou])y$/i,"$1ies");
 			val = val.replace(/sh$/i,"shes");
 			val = val.replace(/ife$/i,"ives");
 			val = val.replace(/([^s])$/i,"$1s");
@@ -1399,8 +1399,12 @@ function bot_init() {
 		
 		state.last_evtime = moment();
 		
+		message = string(message).trim();
+		
+		if (message === "") return;
+		
 		trace("handle_message");
-		log(from + ' => ' + to + ': ' + message);
+		log(from + ' => ' + to + ': [' + message + ']');
 		
 		if (to == config.name) to = from;
 		
