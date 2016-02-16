@@ -1465,7 +1465,7 @@ function bot_init() {
 		
 		action_modifier = rand_el(action_modifiers);
 		
-		send(to,from,text + " " + action_modifier,"","builtin: action handler");
+		send(to,from,"/me " + text + " " + action_modifier,"","builtin: action handler");
 	}
 	client.addListener("action",handle_action);
 
