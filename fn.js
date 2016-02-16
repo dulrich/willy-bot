@@ -49,7 +49,7 @@ function escape(db,p,sub) {
 	sub = bool(sub);
 	
 	if (isarray(p)) {
-		return (sub && "(") + p.forEach(function(v) {
+		return (sub && "(") + p.map(function(v) {
 			return escape(db,v,true);
 		}).join(",") + (sub && ")");
 	}
