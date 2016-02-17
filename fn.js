@@ -116,7 +116,7 @@ function rand(min,max) {
 }
 
 function rand_el(list) {
-	return list[rand(0,list.length)];
+	return array(list)[rand(0,list.length)];
 }
 
 function safe_div(a,b) {

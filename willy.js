@@ -1190,6 +1190,14 @@ var command_list = [{
 },
 {
 	trigger   : U("command: %s.",help.verbosity.syntax),
+	pattern   : /^verbosity\?/i,
+	verbosity : 1,
+	reply     : function(from,to,input) {
+		return "?from: current verbosity is " + fixed(config.verbosity);
+	}
+},
+{
+	trigger   : U("command: %s.",help.verbosity.syntax),
 	pattern   : /^verbosity/i,
 	verbosity : 1,
 	reply     : "?from: i'll consider it if you give me a valid number"
