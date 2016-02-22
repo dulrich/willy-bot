@@ -33,7 +33,7 @@ config.regex_command = new RegExp("^"+config.name+"\\b","i");
 config.bored_timeout = int(config.bored_timeout) || 5 * 60; // seconds
 config.quiet_time = int(config.quiet_time) || 5;
 config.verbosity = config.verbosity || 1.0;
-config.version = U("%s-bot-1.5.0",config.name);
+config.version = U("%s-bot-1.5.1",config.name);
 
 var question_answers = {};
 
@@ -341,6 +341,24 @@ function replace_tokens(str,from,m_match) {
 		else {
 			return rand(min,max);
 		}
+	});
+	
+	out = out.replace(/\?var_([^_]+)_(\d+)_(\d+)/,function(match,text,min,max) {
+		var i,j,out;
+		
+		min = int(min);
+		max = int(max);
+		
+		out = "";
+		
+		if (min > max || min === 0 || max === 0) return out;
+		
+		j = rand(min,max);
+		for(i = 0;i < j;i++) {
+			out += text;
+		}
+		
+		return out;
 	});
 	
 	_.each(lists,function(list,name) {

@@ -7,6 +7,9 @@
 * support multiple channels and queries properly
 * https://en.wikipedia.org/w/api.php?action=query&list=random&rnlimit=1&rnnamespace=0&format=json&prop=info&inprop=url
 
+* 2016-02-22 -- 1.5.1
+* ?var_A_X_Y random multi-substitution syntax
+
 * 2016-02-12 -- 1.5.0
 * %list% replacements in patterns
 
