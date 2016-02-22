@@ -362,3 +362,62 @@ INSERT IGNORE INTO wb_answer_item (AnswerListID,AnswerReply,AnswerNick) VALUES
 	(6,'Cthulu','avid'),
 	(6,'the Spanish Inquisition','avid'),
 	(6,'the fruitcake your ?rand_person gave you last ?rand_holiday','avid');
+
+CREATE TABLE IF NOT EXISTS wb_inversion (
+	InversionID INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+	InversionA VARCHAR(100) NOT NULL DEFAULT '',
+	InversionB VARCHAR(100) NOT NULL DEFAULT '',
+	InversionNick VARCHAR(100) NOT NULL DEFAULT '',
+	InversionDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	_deleted TINYINT NOT NULL DEFAULT 0,
+	UNIQUE(InversionA,InversionB)
+) engine=InnoDB;
+
+INSERT IGNORE INTO wb_inversion (InversionA,InversionB,InversionNick) VALUES
+	('good','bad','avid'),
+	('good','evil','avid'),
+	('right','wrong','avid'),
+	('correct','incorrect','avid'),
+	('correct','wrong','avid'),
+	('true','false','avid'),
+	('warm','cold','avid'),
+	('hot','cold','avid'),
+	('dry','wet','avid'),
+	('arid','humid','avid'),
+	('dry','moist','avid'),
+	('hi','bye','avid'),
+	('open','closed','avid'),
+	('left','right','avid'),
+	('up','down','avid'),
+	('perfect','imperfect','avid'),
+	('perfect','flawed','avid'),
+	('straight','crooked','avid'),
+	('sweet','sour','avid'),
+	('yes','no','avid');
+
+DELETE FROM wb_pattern WHERE PatternNick = 'avid'
+	AND PatternRegExp = 'yes' AND PatternReply = 'no';
+DELETE FROM wb_pattern WHERE PatternNick = 'dulrich'
+	AND PatternRegExp = 'ok' AND PatternReply = 'not ok';
+DELETE FROM wb_pattern WHERE PatternNick = 'avid'
+	AND PatternRegexp = 'perfect' AND PatternReply = '?or_flawed_imperfect';
+DELETE FROM wb_pattern WHERE PatternNick = 'avid'
+	AND PatternRegExp = 'right' AND PatternReply = 'left';
+DELETE FROM wb_pattern WHERE PatternNick = 'rolandd'
+	AND PatternRegExp = 'left' AND PatternReply = 'right';
+DELETE FROM wb_pattern WHERE PatternNick = 'rolandd'
+	AND PatternRegExp = 'up' AND PatternReply = 'down';
+DELETE FROM wb_pattern WHERE PatternNick = 'avid'
+	AND PatternRegExp = 'true' AND PatternReply = 'false';
+DELETE FROM wb_pattern WHERE PatternNick = 'avid'
+	AND PatternRegExp = 'false' AND PatternReply = 'true';
+DELETE FROM wb_pattern WHERE PatternNick = 'avid'
+	AND PatternRegExp = 'good' AND PatternReply = 'bad';
+DELETE FROM wb_pattern WHERE PatternNick = 'avid'
+	AND PatternRegExp = 'bad' AND PatternReply = 'good';
+DELETE FROM wb_pattern WHERE PatternNick = 'semi_avid'
+	AND PatternRegExp = 'sweet' AND PatternReply = 'sour';
+DELETE FROM wb_pattern WHERE PatternNick = 'semi_avid'
+	AND PatternRegExp = 'sour' AND PatternReply = 'sweet';
+DELETE FROM wb_pattern WHERE PatternNick = 'semi_avid'
+	AND PatternRegExp = 'right' AND PatternReply = 'wrong';
