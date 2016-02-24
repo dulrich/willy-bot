@@ -521,7 +521,7 @@ function send_raw(to,from,message,m_match,raw,trigger,verbosity) {
 		return;
 	}
 	
-	log("ISAID: " + out);
+	log(U("ISAID: (%s) => [%s]",message,out));
 	
 	state.last_acttime = moment();
 	if (!raw && state.next_rand !== null) {
