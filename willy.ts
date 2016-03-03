@@ -16,16 +16,38 @@
 
 /* jshint latedef: nofunc */
 
-var
-	_          = require("lodash"),
-	A          = require("async"),
-	irc        = require("irc"),
-	moment     = require("moment"),
-	mysql      = require("mysql"),
-	num_to_str = require("./number_to_string.js"),
-	request    = require("request");
+/// <reference path="typings/main.d.ts" />
 
-require("./fn.js")(global);
+import _          = require("lodash");
+import A          = require("async");
+import irc        = require("irc");
+import moment     = require("moment");
+import mysql      = require("mysql");
+import num_to_str = require("./number_to_string.ts");
+import request    = require("request");
+
+declare function delay(fn:any, thisarg:any, args:any[], millis:number);
+declare function eighth(n:any);
+declare function fixed(f:any, b?:number):string;
+declare function float(n:any, b?:number):number;
+declare function int(n:any, b?:number):number;
+declare function isarray(a:any):boolean;
+declare function isdef(v:any):boolean;
+declare function isfn(f:any):boolean;
+declare function isndef(v:any):boolean;
+declare function isstring(s:any):boolean;
+declare function log(...args:any[]);
+declare function orin<T>(e:T, list:T[]):boolean;
+declare function query(db:any, q:any, cb:any);
+declare function rand(min:number, max:number):number;
+declare function rand_el(list:any|any[]);
+declare function safe_div(a:any, b:any);
+declare function string(s:any):string;
+declare function trace(msg:string);
+declare function U(format:string, ...args:any[]):string;
+declare function upperCase(s:any);
+
+require("./fn.ts")(global);
 
 var config = require("./config.json");
 
@@ -462,29 +484,20 @@ function replace_tokens(str,from,m_match) {
 	
 	if (config.mode == "ye olde englishe") {
 		_.each(ye_olde_words,function(pair,i) {
-			if (isarray(pair)) {
-				ye_olde_words[i] = {
-					new    : pair[0],
-					olde   : pair[1],
-					regexp : new RegExp("\\b"+pair[0]+"\\b","gi")
-				};
+			if (!pair[2]) {
+				ye_olde_words[i][2] = new RegExp("\\b"+pair[0]+"\\b","gi")
 			}
 			
-			out = out.replace(pair.regexp,pair.olde);
+			out = out.replace(pair[2],pair[1]);
 		});
 	}
 	else if (config.mode === "l33t h4x0r") {
 		_.each(l33t_h4x0r_w4rdz,function(pair,i) {
-			if (isarray(pair)) {
-				l33t_h4x0r_w4rdz[i] = {
-					l33t   : pair[1],
-					r3g3xp : new RegExp(pair[0],"gi")
-				};
-				
-				pair = l33t_h4x0r_w4rdz[i];
+			if (!pair[2]) {
+				l33t_h4x0r_w4rdz[i][2] = new RegExp(pair[0],"gi");
 			}
 			
-			out = out.replace(pair.r3g3xp,pair.l33t);
+			out = out.replace(pair[2],pair[1]);
 		});
 	}
 	else log("MODE config.mode");
@@ -540,7 +553,7 @@ function send_raw(to,from,message,m_match,raw,trigger,verbosity) {
 	});
 }
 
-function send(to,from,message,m_match,trigger,verbosity) {
+function send(to,from,message,m_match,trigger,verbosity = 0) {
 	var raw;
 	
 	message = string(message);
@@ -576,7 +589,9 @@ var action_modifiers = [
 	"better than ?from"
 ];
 
-var l33t_h4x0r_w4rdz = [
+type Mode = [string,string] | [string,string,RegExp];
+
+var l33t_h4x0r_w4rdz:Mode[] = [
 	["\\b(too|to|two)\\b","2"],
 	["\\b([b-df-hj-np-tv-z])ate\\b","$18"],
 	["you","u"],
@@ -600,7 +615,7 @@ var l33t_h4x0r_w4rdz = [
 	["/m3","/me"]
 ];
 
-var ye_olde_words = [
+var ye_olde_words:Mode[] = [
 	["are","art"],
 	["you do","you dost"],
 	["do you","dost you"],
@@ -628,7 +643,14 @@ var ye_olde_words = [
 
 var help = require("./help.json");
 
-var command_list = [{
+interface Command {
+	trigger:string;
+	pattern:RegExp;
+	verbosity?:number;
+	reply:string[]|((from:string, to:string, input:any) => string | string[])
+}
+
+var command_list:Command[] = [{
 	trigger   : U("command: %s.",help.help.syntax),
 	pattern   : /^help(\s+\w+)?$/i,
 	verbosity : 1,
@@ -697,7 +719,7 @@ var command_list = [{
 	trigger   : U("command: %s.",help.listsearch.syntax),
 	pattern   : /^listsearch/i,
 	verbosity : 1,
-	reply     : "that's not a valid search term"
+	reply     : ["that's not a valid search term"]
 },
 {
 	trigger   : U("command: %s.",help.listshow.syntax),
@@ -800,7 +822,7 @@ var command_list = [{
 				.replace(new RegExp(U("%s %s",name,name),"g"),name)
 				.replace(new RegExp(U("%s%s",name,name),"g"),name);
 			
-			send(to,from,msg,"",false,"random joke from icndb.com/api",1);
+			send(to,from,msg,"","random joke from icndb.com/api",1);
 		});
 		
 		return "";
@@ -826,7 +848,7 @@ var command_list = [{
 		
 		if (
 			pattern_map[pattern]
-			&& _.contains(pattern_list[pattern_map[pattern]].reply)
+			&& _.contains(pattern_list[pattern_map[pattern]], reply)
 		) {
 			return U("?from: i already match that pattern");
 		}
@@ -1218,9 +1240,10 @@ var command_list = [{
 	trigger   : U("command: %s.",help.verbosity.syntax),
 	pattern   : /^verbosity/i,
 	verbosity : 1,
-	reply     : "?from: i'll consider it if you give me a valid number"
+	reply     : ["?from: i'll consider it if you give me a valid number"]
 },
 {
+	trigger : "",
 	pattern   : /(go die|kill you)/i,
 	verbosity : 1,
 	reply     : function(from,to,input) {
@@ -1230,6 +1253,7 @@ var command_list = [{
 	}
 },
 {
+	trigger : "",
 	pattern   : /^(time|got the time\??|what time is it\??)/i,
 	verbosity : 1,
 	reply     : function(from,to,input) {
@@ -1315,10 +1339,12 @@ var command_list = [{
 	}
 },
 {
+	trigger : "",
 	pattern : /\bsudo\b/i,
 	reply   : meta_lists.secret
 },
 {
+	trigger : "",
 	pattern : /^(tell|make)\s/i,
 	verbosity : 1,
 	reply   : function(from,to,input) {
@@ -1342,6 +1368,7 @@ var command_list = [{
 	}
 },
 {
+	trigger : "",
 	pattern : /.+\?/i,
 	reply   : function(from,to,input) {
 		var answer;
@@ -1368,6 +1395,7 @@ var command_list = [{
 	}
 },
 {
+	trigger : "",
 	pattern : /.?/,
 	reply   : meta_lists.nothing
 }];
@@ -1390,7 +1418,7 @@ function bot_init() {
 		// trim leading space & punctuation
 		input = input.replace(/^[\s,:]+/,"").replace(/\s+$/,"");
 		
-		_.each(command_list,function(c) {
+		_.each(command_list,function(c:Command) {
 			var m_command;
 			
 			if (handled) return;
@@ -1401,8 +1429,12 @@ function bot_init() {
 			
 			handled = true;
 			
-			if (isfn(c.reply)) out = c.reply(from,to,input);
-			else out = rand_el(c.reply);
+			if (isfn(c.reply)) {
+				out = c.reply(from,to,input);
+			}
+			else {
+				out = rand_el(c.reply);
+			}
 			
 			send(to,from,out,m_command,c.trigger||null,c.verbosity);
 		});
@@ -1417,7 +1449,7 @@ function bot_init() {
 		
 		state.last_repeat = repeat;
 		
-		send(to,from,repeat,"",null);
+		send(to,from,repeat,"",null,0);
 	}
 
 	function handle_message(from, to, message) {
@@ -1466,7 +1498,7 @@ function bot_init() {
 		
 		out = rand_el(chosen[0].reply);
 		
-		send(to,from,out,chosen[1],chosen[0]);
+		send(to,from,out,chosen[1],chosen[0],0);
 		
 		handled = true;
 	}
@@ -1491,7 +1523,7 @@ function bot_init() {
 		
 		action_modifier = rand_el(action_modifiers);
 		
-		send(to,from,"/me " + text + " " + action_modifier,"","builtin: action handler");
+		send(to,from,"/me " + text + " " + action_modifier,"","builtin: action handler",0);
 	}
 	client.addListener("action",handle_action);
 

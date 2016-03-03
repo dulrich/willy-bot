@@ -1,4 +1,8 @@
+*.d.ts
+*.swp
+
 config.json
 npm-debug.log
 
 node_modules/*
+typings/*
