@@ -1449,7 +1449,7 @@ function bot_init() {
 		
 		state.last_repeat = repeat;
 		
-		send(to,from,repeat,"",null,0);
+		send(to,from,repeat,"",null);
 	}
 
 	function handle_message(from, to, message) {
@@ -1498,7 +1498,7 @@ function bot_init() {
 		
 		out = rand_el(chosen[0].reply);
 		
-		send(to,from,out,chosen[1],chosen[0],0);
+		send(to,from,out,chosen[1],chosen[0]);
 		
 		handled = true;
 	}
@@ -1523,7 +1523,7 @@ function bot_init() {
 		
 		action_modifier = rand_el(action_modifiers);
 		
-		send(to,from,"/me " + text + " " + action_modifier,"","builtin: action handler",0);
+		send(to,from,"/me " + text + " " + action_modifier,"","builtin: action handler");
 	}
 	client.addListener("action",handle_action);
 

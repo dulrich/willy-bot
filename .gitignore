@@ -1,6 +1,8 @@
 *.d.ts
 *.swp
 
+*.js
+
 config.json
 npm-debug.log
 
