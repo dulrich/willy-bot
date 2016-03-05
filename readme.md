@@ -19,6 +19,7 @@ like wally and welly, but the next-gen
 * `sudo apt-get install libicu-dev` for `node-irc` dependency
 * `npm install`
 * copy `config.example.json` to `config.json` and insert your desired info
+* `make` to compile for production, or `make dev` to enable TypeScript file watching
 * `node willy.js` or your choice of node daemonizers (nodemon, forever, pm2, etc)
 
 
