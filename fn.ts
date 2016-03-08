@@ -24,17 +24,17 @@ function array(a) {
 	return isarray(a) ? a : [a];
 }
 
-function bool(b) {
+function bool(b:any):boolean {
 	return (b === "false") ? false : Boolean(b);
 }
 
-function delay(fn,thisarg,args,millis) {
+function delay(fn:any, thisarg:any, args:any[], millis:number):void {
 	setTimeout(function() {
 		fn.apply(thisarg,args);
 	},millis);
 }
 
-function eighth(n) {
+function eighth(n:any):string {
 	var whole, fract;
 	
 	n = int((float(n) + 0.06125) * 8);
@@ -57,13 +57,13 @@ function escape(db,p,sub) {
 	return db.escape(p);
 }
 
-function fixed(f,n) {
-	return float(f).toFixed(ifdef(n,int(n),2));
+function fixed(f:any, b?:number):string {
+	return float(f).toFixed(ifdef(b,int(b),2));
 }
 
-function float(n,b) {
+function float(n:any):number {
 	var f;
-	f = parseFloat(n,b||10);
+	f = parseFloat(n);
 	return isFinite(f) ? f : 0;
 }
 
@@ -71,78 +71,85 @@ function ifdef(v,a,b) {
 	return isdef(v) ? a : b;
 }
 
-function int(n,b) {
+function int(n:any, b?:number):number {
 	return parseInt(n,b||10) | 0; // jshint ignore:line
 }
 
-function isarray(a) {
+function isarray(a:any):boolean {
 	return a instanceof Array;
 }
 
-function isdef(v) {
+function isdef(v:any):boolean {
 	return v !== null && typeof v !== "undefined";
 }
 
-function isfn(f) {
+function isfn(f:any):boolean {
 	return typeof f === "function";
 }
 
-function isndef(v) {
+function isndef(v:any):boolean {
 	return v === null || typeof v === "undefined";
 }
 
-function isobj(o) {
+function isobj(o:any):boolean {
 	return typeof o === "object";
 }
 
-function isstring(s) {
+function isstring(s:any):boolean {
 	return typeof s === "string";
 }
 
-function log() {
+function log(...args:any[]):void {
 	return console.log.apply(console,arguments);
 }
 
-function lowerCase(s) {
+function lowerCase(s:any):string {
 	return string(s).toLowerCase();
 }
 
-function orin(e,list) {
+function orin<T>(e:T, list:T[]):boolean {
 	return array(list).indexOf(e) !== -1;
 }
 
-function rand(min,max) {
+function rand(min:number, max:number):number {
 	return min + Math.floor(Math.random() * (max - min));
 }
 
-function rand_el(list) {
-	return array(list)[rand(0,list.length)];
+function rand_el<T>(list:T|T[]):T {
+	var ll:T[] = array(list);
+	
+	return ll[rand(0,ll.length)];
 }
 
-function safe_div(a,b) {
+function safe_div(a:any, b:any):number {
 	a = float(a);
 	b = float(b);
 	
 	return b ? (a/b) : 0.0;
 }
 
-function string(s) {
+function string(s:any):string {
 	return ifdef(s,""+s,"");
 }
 
-function trace(msg) {
+function trace(msg:string):void {
 	log("TRACE: " + msg);
 }
 
-function U() {
+function U(format:string, ...args:any[]):string {
 	return util.format.apply(util,arguments);
 }
 
-function upperCase(s) {
+function upperCase(s:any):string {
 	return string(s).toUpperCase();
 }
 
-function query(db,q,cb) {
+interface DB {
+	escape:any;
+	query:any;
+}
+
+function query(db:DB, q:any, cb:(err:any, res:any[]) => void) {
 	var exited,out,query_o,rx_match;
 	
 	exited = false;
