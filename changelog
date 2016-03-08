@@ -7,6 +7,10 @@
 * support multiple channels and queries properly
 * https://en.wikipedia.org/w/api.php?action=query&list=random&rnlimit=1&rnnamespace=0&format=json&prop=info&inprop=url
 
+* 2016-03-07 -- 1.6.0
+* finish TypeScript cleanup
+* add mode: piglatin
+
 * 2016-02-22 -- 1.5.1
 * ?var_A_X_Y random multi-substitution syntax
 

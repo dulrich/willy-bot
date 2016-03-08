@@ -35,7 +35,7 @@ config.regex_command = new RegExp("^"+config.name+"\\b","i");
 config.bored_timeout = int(config.bored_timeout) || 5 * 60; // seconds
 config.quiet_time = int(config.quiet_time) || 5;
 config.verbosity = config.verbosity || 1.0;
-config.version = U("%s-bot-1.5.1",config.name);
+config.version = U("%s-bot-1.6.0",config.name);
 
 var question_answers = {};
 
@@ -79,7 +79,7 @@ db.on("error",function(err) {
 	db = init_db();
 });
 
-interface WillyList extends Dictionary<{}> {
+interface WillyList {
 	[id:string]:string[];
 	nick:string[];
 }
@@ -481,6 +481,15 @@ function replace_tokens(str,from,m_match) {
 			out = out.replace(pair[2],pair[1]);
 		});
 	}
+	else if (config.mode == "piglatin") {
+		_.each(piglatin_words,function(pair,i) {
+			if (!pair[2]) {
+				piglatin_words[i][2] = new RegExp(pair[0],"gi");
+			}
+			
+			out = out.replace(pair[2],pair[1]);
+		});
+	}
 	else if (config.mode === "l33t h4x0r") {
 		_.each(l33t_h4x0r_w4rdz,function(pair,i) {
 			if (!pair[2]) {
@@ -603,6 +612,12 @@ var l33t_h4x0r_w4rdz:Mode[] = [
 	["[s]+\\b","z"],
 	["\\bb","8"],
 	["/m3","/me"]
+];
+
+var piglatin_words:Mode[] = [
+	["\\b([aeiou]\\w+\\b)","$1way"],
+	["\\b([b-df-hj-np-tv-z])([b-df-hj-np-tv-xz]+)?([aeiouy])(\\w+)?\\b","$3$4$1$2ay"],
+	["\\/emay","/me"]
 ];
 
 var ye_olde_words:Mode[] = [
@@ -1085,7 +1100,7 @@ var command_list:Command[] = [{
 		
 		mode = input.split("mode ")[1];
 		
-		if (orin(mode,["ye olde englishe","l33t h4x0r","normal"])) {
+		if (orin(mode,["ye olde englishe","piglatin","l33t h4x0r","normal"])) {
 			config.mode = mode;
 			
 			return U("entering %s mode",mode);
