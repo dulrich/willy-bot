@@ -35,7 +35,7 @@ config.regex_command = new RegExp("^"+config.name+"\\b","i");
 config.bored_timeout = int(config.bored_timeout) || 5 * 60; // seconds
 config.quiet_time = int(config.quiet_time) || 5;
 config.verbosity = config.verbosity || 1.0;
-config.version = U("%s-bot-1.6.0",config.name);
+config.version = U("%s-bot-1.6.1",config.name);
 
 var question_answers = {};
 
@@ -103,6 +103,15 @@ pattern_list = [];
 pattern_map = {};
 
 var nick_pattern_index = -1;
+
+var list_cbs = [];
+function do_list_cbs(list) {
+	if (!list) return;
+	
+	_.each(list_cbs,function(c:Command) {
+		c.list_cb.call(c,list);
+	});
+}
 
 function load_lists(acb) {
 	var query_lists = "SELECT \
@@ -172,15 +181,13 @@ function load_meta(acb) {
 	});
 }
 
-function listify(raw:string) {
+function listify(raw:string):string {
 	return string(raw).replace(/%(\w+)%/g,function(match,list) {
 		log(match);
 		
 		if (isndef(lists[list])) return match[0];
 		
-		lists_regex[list] = lists_regex[list] || lists[list].join("|");
-		
-		return U("(%s)",lists_regex[list]);
+		return U("(%s)",lists[list].join("|"));
 	});
 }
 
@@ -263,6 +270,10 @@ A.parallel([
 	load_answers
 ],function(err) {
 	if (err) return log(err);
+	
+	_.each(lists,function(list,name) {
+		do_list_cbs(name);
+	});
 	
 	client = new irc.Client(config.server,config.name,{
 		// sasl : true,
@@ -669,6 +680,7 @@ interface Command {
 	verbosity?:number;
 	reply?:string;
 	replyf?:((from:string, to:string, input:any, match?:string[]) => string);
+	list_cb?:((list:string) => void)
 }
 
 var command_list:Command[] = [{
@@ -1100,6 +1112,8 @@ var command_list:Command[] = [{
 				
 				log("ADDED LIST ITEM: " + list + ", " + item);
 				lists[list].push(item);
+				
+				do_list_cbs(list);
 			});
 		});
 		
@@ -1396,6 +1410,11 @@ var command_list:Command[] = [{
 		}
 		
 		return out;
+	},
+	list_cb : function(list) {
+		if (list === "cmd_verb") {
+			this.pattern = new RegExp(listify("^%cmd_verb%\\s+(\\w+)(.+)?","i"));
+		}
 	}
 },
 {
@@ -1432,6 +1451,12 @@ var command_list:Command[] = [{
 		return rand_el(meta_lists.nothing)
 	}
 }];
+_.each(command_list,function(c:Command) {
+	if (isfn(c.list_cb)) {
+		list_cbs.push(c);
+	}
+});
+
 
 // ===== BOT STARTUP ===== //
 

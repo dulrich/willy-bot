@@ -7,6 +7,9 @@
 * support multiple channels and queries properly
 * https://en.wikipedia.org/w/api.php?action=query&list=random&rnlimit=1&rnnamespace=0&format=json&prop=info&inprop=url
 
+* 2016-03-09 -- 1.6.1
+* add optional list_cb to commands
+
 * 2016-03-07 -- 1.6.0
 * finish TypeScript cleanup
 * add mode: piglatin
