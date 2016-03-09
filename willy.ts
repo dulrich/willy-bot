@@ -481,10 +481,19 @@ function replace_tokens(str,from,m_match) {
 			out = out.replace(pair[2],pair[1]);
 		});
 	}
-	else if (config.mode == "piglatin") {
-		_.each(piglatin_words,function(pair,i) {
+	else if (config.mode == "piglatin" || config.mode == "w-piglatin") {
+		_.each(piglatin_words_w,function(pair,i) {
 			if (!pair[2]) {
-				piglatin_words[i][2] = new RegExp(pair[0],"gi");
+				piglatin_words_w[i][2] = new RegExp(pair[0],"gi");
+			}
+			
+			out = out.replace(pair[2],pair[1]);
+		});
+	}
+	else if (config.mode == "y-piglatin") {
+		_.each(piglatin_words_y,function(pair,i) {
+			if (!pair[2]) {
+				piglatin_words_y[i][2] = new RegExp(pair[0],"gi");
 			}
 			
 			out = out.replace(pair[2],pair[1]);
@@ -614,9 +623,15 @@ var l33t_h4x0r_w4rdz:Mode[] = [
 	["/m3","/me"]
 ];
 
-var piglatin_words:Mode[] = [
+var piglatin_words_w:Mode[] = [
 	["\\b([aeiou]\\w+\\b)","$1way"],
 	["\\b([b-df-hj-np-tv-z])([b-df-hj-np-tv-xz]+)?([aeiouy])(\\w+)?\\b","$3$4$1$2ay"],
+	["\\/emay","/me"]
+];
+
+var piglatin_words_y:Mode[] = [
+	["\\b([aeiou]\\w+\\b)","$1yay"],
+	["\\b([b-df-hj-np-tv-xz]+)([aeiouy])(\\w+)?\\b","$2$3$1ay"],
 	["\\/emay","/me"]
 ];
 
@@ -1096,11 +1111,20 @@ var command_list:Command[] = [{
 	pattern   : /^mode .+$/i,
 	verbosity : 1,
 	replyf    : function(from,to,input) {
-		var mode;
+		var mode,mode_list;
 		
 		mode = input.split("mode ")[1];
 		
-		if (orin(mode,["ye olde englishe","piglatin","l33t h4x0r","normal"])) {
+		mode_list = [
+			"ye olde englishe",
+			"piglatin",
+			"w-piglatin",
+			"y-piglatin",
+			"l33t h4x0r",
+			"normal"
+		];
+		
+		if (orin(mode,mode_list)) {
 			config.mode = mode;
 			
 			return U("entering %s mode",mode);
