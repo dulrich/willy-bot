@@ -631,7 +631,7 @@ var piglatin_words_w:Mode[] = [
 
 var piglatin_words_y:Mode[] = [
 	["\\b([aeiou]\\w+\\b)","$1yay"],
-	["\\b([b-df-hj-np-tv-xz]+)([aeiouy])(\\w+)?\\b","$2$3$1ay"],
+	["\\b([b-df-hj-np-tv-z])([b-df-hj-np-tv-xz]+)?([aeiouy])(\\w+)?\\b","$3$4$1$2ay"],
 	["\\/emay","/me"]
 ];
 
