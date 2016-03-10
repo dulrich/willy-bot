@@ -35,7 +35,7 @@ config.regex_command = new RegExp("^"+config.name+"\\b","i");
 config.bored_timeout = int(config.bored_timeout) || 5 * 60; // seconds
 config.quiet_time = int(config.quiet_time) || 5;
 config.verbosity = config.verbosity || 1.0;
-config.version = U("%s-bot-1.6.1",config.name);
+config.version = U("%s-bot-1.6.2",config.name);
 
 var question_answers = {};
 
@@ -1174,21 +1174,32 @@ var command_list:Command[] = [{
 },
 {
 	trigger   : U("command: %s.",help.search.syntax),
-	pattern   : /^search\s+.+/i,
+	pattern   : /^search(w|word)?\s+(.+)/i,
 	verbosity : 1,
-	replyf    : function(from,to,input) {
-		var param,query_search,term,terms;
+	replyf    : function(from,to,input,match) {
+		var param,query_search,term,terms,word;
 		
-		term = input.replace(/^search\s+/i,"");
+		word = bool(match[1]);
+		
+		term = match[2];
 		terms = term.split(/ _-/);
 		
 		query_search = "SELECT * FROM wb_pattern WHERE NOT _deleted AND ( 0 ";
 		
 		param = {};
 		_.each(terms,function(t,i) {
-			query_search += " OR PatternRegExp LIKE ?term_"+i;
-			query_search += " OR PatternReply LIKE ?term_"+i;
-			param["term_" + i] = "%"+t+"%";
+			if (word) {
+				query_search += " OR PatternRegExp REGEXP ?term_"+i;
+				query_search += " OR PatternReply REGEXP ?term_"+i;
+				
+				param["term_" + i] = "[[:<:]]" + t + "[[:>:]]";
+			}
+			else {
+				query_search += " OR PatternRegExp LIKE ?term_"+i;
+				query_search += " OR PatternReply LIKE ?term_"+i;
+				
+				param["term_" + i] = "%"+t+"%";
+			}
 		});
 		
 		query_search += " ) ORDER BY RAND() LIMIT 0,3";
