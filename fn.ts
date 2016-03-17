@@ -198,7 +198,12 @@ function query(db:DB, q:any, cb:(err:any, res:any[]) => void) {
 	db.query(out,cb);
 }
 
-function globalize(o) {
+// why this default property of Function is unknown, is unknown
+interface Function {
+	name:string;
+}
+
+function globalize(o:Object):void {
 	[
 		array,bool,fixed,float,int,safe_div,
 		ifdef,
@@ -206,7 +211,7 @@ function globalize(o) {
 		lowerCase,string,upperCase,
 		delay,eighth,log,rand,rand_el,trace,U,
 		escape,orin,query
-	].forEach(function(fn) {
+	].forEach(function(fn:Function):void {
 		o[fn.name] = fn;
 	});
 }

@@ -1424,7 +1424,7 @@ var command_list:Command[] = [{
 	},
 	list_cb : function(list) {
 		if (list === "cmd_verb") {
-			this.pattern = new RegExp(listify("^%cmd_verb%\\s+(\\w+)(.+)?","i"));
+			this.pattern = new RegExp(listify("^%cmd_verb%\\s+(\\w+)(.+)?"),"i");
 		}
 	}
 },

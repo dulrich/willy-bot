@@ -4,10 +4,10 @@
   "devDependencies": {},
   "ambientDependencies": {
     "async": "registry:dt/async#1.4.2+20160215162030",
-    "form-data": "registry:dt/form-data#0.0.0+20150826060748",
+    "form-data": "registry:dt/form-data#0.0.0+20160316155526",
     "irc": "registry:dt/irc#0.3.12+20150519154330",
     "lodash": "registry:dt/lodash#3.10.0+20160308151359",
-    "moment": "registry:dt/moment#2.8.0+20150810140021",
+    "moment-node": "registry:dt/moment-node#2.11.1+20160317120654",
     "mysql": "registry:dt/mysql#0.0.0+20160118105930",
     "node": "registry:dt/node#4.0.0+20160311162451",
     "request": "registry:dt/request#0.0.0+20160311134650"
