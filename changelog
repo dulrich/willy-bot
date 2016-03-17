@@ -7,6 +7,9 @@
 * support multiple channels and queries properly
 * https://en.wikipedia.org/w/api.php?action=query&list=random&rnlimit=1&rnnamespace=0&format=json&prop=info&inprop=url
 
+* 2016-03-17 -- 1.6.3
+* add config.repeat_timeout to prevent same pattern in short timespan
+
 * 2016-03-10 -- 1.6.2
 * add "word mode": searchw(ord)? <term>
 

@@ -33,9 +33,10 @@ var config = require("./config.json");
 
 config.regex_command = new RegExp("^"+config.name+"\\b","i");
 config.bored_timeout = int(config.bored_timeout) || 5 * 60; // seconds
+config.repeat_timeout = int(config.repeat_timeout) || 5 * 60; // seconds
 config.quiet_time = int(config.quiet_time) || 5;
 config.verbosity = config.verbosity || 1.0;
-config.version = U("%s-bot-1.6.2",config.name);
+config.version = U("%s-bot-1.6.3",config.name);
 
 var question_answers = {};
 
@@ -97,7 +98,16 @@ var meta_lists = {
 	secret  : []
 };
 
-var pattern_list,pattern_map;
+interface Pattern {
+	trigger  : string;
+	builtin ?: boolean;
+	pattern  : RegExp;
+	reply    : string[];
+	nick    ?: string;
+	usedtime?: moment.Moment;
+};
+
+var pattern_list:Pattern[],pattern_map;
 
 pattern_list = [];
 pattern_map = {};
@@ -114,13 +124,13 @@ function do_list_cbs(list) {
 }
 
 function load_lists(acb) {
-	var query_lists = "SELECT \
-			L.ListName, \
-			I.ItemText \
-		FROM wb_item I \
-		LEFT JOIN wb_list L ON I.ListID = L.ListID \
-		WHERE NOT I._deleted \
-			AND NOT L._deleted";
+	var query_lists = `SELECT
+			L.ListName,
+			I.ItemText
+		FROM wb_item I
+		LEFT JOIN wb_list L ON I.ListID = L.ListID
+		WHERE NOT I._deleted
+			AND NOT L._deleted`;
 
 	query(db,query_lists,function(err,res) {
 		var list_pattern;
@@ -160,13 +170,13 @@ function load_lists(acb) {
 }
 
 function load_meta(acb) {
-	var query_meta = "SELECT \
-			L.MetaListName, \
-			R.MetaReply \
-		FROM wb_meta_item R \
-		LEFT JOIN wb_meta_list L ON R.MetaListID = L.MetaListID \
-		WHERE NOT R._deleted \
-			AND NOT L._deleted";
+	var query_meta = `SELECT
+			L.MetaListName,
+			R.MetaReply
+		FROM wb_meta_item R
+		LEFT JOIN wb_meta_list L ON R.MetaListID = L.MetaListID
+		WHERE NOT R._deleted
+			AND NOT L._deleted`;
 
 	query(db,query_meta,function(err,res) {
 		if (err) return acb("ERROR: failed to load meta lists",err);
@@ -213,11 +223,11 @@ function create_pattern(pattern,reply,nick) {
 }
 
 function load_patterns(acb) {
-	var query_patterns = "SELECT \
-			P.* \
-		FROM wb_pattern P \
-		WHERE NOT P._deleted \
-		ORDER BY P.PatternPriority DESC,P.PatternRegExp,P.PatternReply";
+	var query_patterns = `SELECT
+			P.*
+		FROM wb_pattern P
+		WHERE NOT P._deleted
+		ORDER BY P.PatternPriority DESC,P.PatternRegExp,P.PatternReply`;
 	
 	query(db,query_patterns,function(err,res) {
 		if (err) return acb("ERROR: failed to load patterns",err);
@@ -235,13 +245,13 @@ function load_patterns(acb) {
 }
 
 function load_answers(acb) {
-	var query_answers = "SELECT \
-			L.AnswerListName, \
-			A.AnswerReply \
-		FROM wb_answer_item A \
-		LEFT JOIN wb_answer_list L ON A.AnswerListID = L.AnswerListID \
-		WHERE NOT A._deleted \
-			AND NOT L._deleted";
+	var query_answers = `SELECT
+			L.AnswerListName,
+			A.AnswerReply
+		FROM wb_answer_item A
+		LEFT JOIN wb_answer_list L ON A.AnswerListID = L.AnswerListID
+		WHERE NOT A._deleted
+			AND NOT L._deleted`;
 	
 	query(db,query_answers,function(err,res) {
 		if (err) return acb("ERROR: failed to load answers",err);
@@ -803,8 +813,8 @@ var command_list:Command[] = [{
 			return "?from: that list already exists; do i look like your ?rand_person?";
 		}
 		
-		query_list = "INSERT IGNORE INTO wb_list \
-			SET ListName = ?list";
+		query_list = `INSERT IGNORE INTO wb_list
+			SET ListName = ?list`;
 		
 		query(db,{
 			query : query_list,
@@ -892,11 +902,11 @@ var command_list:Command[] = [{
 			reply   : reply
 		};
 		
-		query_pattern = "INSERT IGNORE INTO wb_pattern \
-			SET PatternMode = 'word', \
-				PatternRegExp = ?pattern, \
-				PatternReply = ?reply, \
-				PatternNick = ?from";
+		query_pattern = `INSERT IGNORE INTO wb_pattern
+			SET PatternMode = 'word',
+				PatternRegExp = ?pattern,
+				PatternReply = ?reply,
+				PatternNick = ?from`;
 		
 		query(db,{
 			query : query_pattern,
@@ -941,11 +951,11 @@ var command_list:Command[] = [{
 			list  : list
 		};
 		
-		query_answer = "INSERT IGNORE INTO wb_answer_item \
-			SET AnswerReply = ?reply, \
-				AnswerNick = ?from, \
-				AnswerListID = (\
-				SELECT AnswerListID FROM wb_answer_list WHERE AnswerListName = ?list)";
+		query_answer = `INSERT IGNORE INTO wb_answer_item
+			SET AnswerReply = ?reply,
+				AnswerNick = ?from,
+				AnswerListID =
+				SELECT AnswerListID FROM wb_answer_list WHERE AnswerListName = ?list)`;
 		
 		query(db,{
 			query : query_answer,
@@ -988,10 +998,10 @@ var command_list:Command[] = [{
 			reply : reply
 		};
 		
-		query_meta = "INSERT IGNORE INTO wb_meta_item \
-			SET MetaReply = ?reply,\
-				MetaListID = (\
-				SELECT MetaListID FROM wb_meta_list WHERE MetaListName = ?meta)";
+		query_meta = `INSERT IGNORE INTO wb_meta_item
+			SET MetaReply = ?reply,
+				MetaListID = (
+				SELECT MetaListID FROM wb_meta_list WHERE MetaListName = ?meta)`;
 		
 		query(db,{
 			query : query_meta,
@@ -1099,10 +1109,10 @@ var command_list:Command[] = [{
 				list : list
 			};
 			
-			query_item = "INSERT IGNORE INTO wb_item \
-				SET ItemText = ?item,\
-					ListID = (\
-					SELECT ListID FROM wb_list WHERE ListName = ?list)";
+			query_item = `INSERT IGNORE INTO wb_item
+				SET ItemText = ?item,
+					ListID = (
+					SELECT ListID FROM wb_list WHERE ListName = ?list)`;
 			
 			query(db,{
 				query : query_item,
@@ -1554,7 +1564,17 @@ function bot_init() {
 			
 			m_message = message.match(p.pattern);
 			
-			if (!handled && m_message && state.last_pattern != p.pattern) {
+			if (
+				!handled
+				&& m_message
+				&& state.last_pattern != p.pattern
+				&& (
+					!p.usedtime
+					|| moment().add(-config.repeat_timeout,"s").isAfter(p.usedtime)
+				)
+			) {
+				log(p);
+				
 				matched_list.push([p,m_message]);
 			}
 		});
@@ -1563,6 +1583,7 @@ function bot_init() {
 		
 		chosen = rand_el(matched_list);
 		
+		chosen[0].usedtime = moment();
 		state.last_pattern = chosen[0].pattern;
 		
 		out = rand_el(chosen[0].reply);
