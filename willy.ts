@@ -872,6 +872,17 @@ var command_list:Command[] = [{
 	}
 },
 {
+	trigger   : U("command: %s.",help.less.syntax),
+	pattern   : /^(that('s| is) annoying|say that less)$/i,
+	verbosity : 1,
+	replyf    : function(from,to,input) {
+		// make people feel better by thinking they influence the bot ;)
+		log(message_log[message_log.length - 1])
+		
+		return "ok ?from, i'll tone that one down";
+	}
+},
+{
 	trigger   : U("command: %s.",help.match.syntax),
 	pattern   : /^match \/.+\/ reply .+$/i,
 	verbosity : 1,

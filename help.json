@@ -4,6 +4,11 @@
 		"syntax" : "help | help <cmd>",
 		"notes"  : ""
 	},
+	"less" : {
+		"use"    : "decrease frequency of most recent pattern response",
+		"syntax" : "say that less",
+		"notes"  : ""
+	},
 	"listadd" : {
 		"use"    : "add <item>+ to response list <list>",
 		"syntax" : "listadd <list> <item>+",
