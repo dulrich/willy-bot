@@ -201,7 +201,7 @@ function listify(raw:string):string {
 	});
 }
 
-function create_pattern(pattern,reply,nick) {
+function create_pattern(pattern,reply,nick,frequency) {
 	var index,raw;
 	
 	raw = pattern;
@@ -236,7 +236,8 @@ function load_patterns(acb) {
 			create_pattern(
 				row.PatternRegExp,
 				row.PatternReply,
-				row.PatternNick
+				row.PatternNick,
+				row.PatternFrequency
 			);
 		});
 		
@@ -926,7 +927,7 @@ var command_list:Command[] = [{
 			if (err) return log("FAILED TO SAVE PATTERN:" + pattern,err);
 			
 			log("ADDED PATTERN: " + pattern);
-			create_pattern(pattern,reply,from);
+			create_pattern(pattern,reply,from,1.0);
 		});
 		
 		return "?from: ?rand_assent";
