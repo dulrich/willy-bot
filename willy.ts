@@ -398,11 +398,11 @@ function replace_tokens(str, from, m_match) {
 	_.each(lists, function(list, name) {
 		var diff_list, rx_diff, rx_indef, rx_multi, rx_plain, rx_posses;
 		
-		rx_diff   = new RegExp("\\\?(c?)diff_"+name+"\\b(~[a-z]){0, }",  "gi");
-		rx_indef  = new RegExp("\\\?(c?)indef_"+name+"\\b(~[a-z]){0, }", "gi");
-		rx_multi  = new RegExp("\\\?(c?)multi_"+name+"\\b(~[a-z]){0, }", "gi");
-		rx_plain  = new RegExp("\\\?(c?)rand_"+name+"\\b(~[a-z]){0, }",  "gi");
-		rx_posses = new RegExp("\\\?(c?)posses_"+name+"\\b(~[a-z]){0, }", "gi");
+		rx_diff   = new RegExp("\\\?(c?)diff_"+name+"\\b(~[a-z]){0,}",   "gi");
+		rx_indef  = new RegExp("\\\?(c?)indef_"+name+"\\b(~[a-z]){0,}",  "gi");
+		rx_multi  = new RegExp("\\\?(c?)multi_"+name+"\\b(~[a-z]){0,}",  "gi");
+		rx_plain  = new RegExp("\\\?(c?)rand_"+name+"\\b(~[a-z]){0,}",   "gi");
+		rx_posses = new RegExp("\\\?(c?)posses_"+name+"\\b(~[a-z]){0,}", "gi");
 		
 		diff_list = _.clone(list);
 		
