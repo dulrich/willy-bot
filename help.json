@@ -72,6 +72,11 @@
 		"syntax" : "repeat to <#channel> message <message>",
 		"notes"  : ""
 	},
+	"roll" : {
+		"use"    : "roll dice",
+		"syntax" : "roll xdy [+n] [drop n? low|high]",
+		"notes"  : ""
+	},
 	"search" : {
 		"use"    : "look for patterns like <term>",
 		"syntax" : "search <term>+",

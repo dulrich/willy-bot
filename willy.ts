@@ -36,7 +36,7 @@ config.bored_timeout = int(config.bored_timeout) || 5 * 60; // seconds
 config.repeat_timeout = int(config.repeat_timeout) || 5 * 60; // seconds
 config.quiet_time = int(config.quiet_time) || 5;
 config.verbosity = config.verbosity || 1.0;
-config.version = U("%s-bot-1.6.3", config.name);
+config.version = U("%s-bot-1.6.4", config.name);
 
 var question_answers = {};
 
@@ -1355,6 +1355,51 @@ var command_list:Command[] = [{
 		]);
 	}
 },
+{
+	trigger   : U("command: %s.", help.roll.syntax),
+	pattern   : /^roll (\d+)d(\d+)(\s*)(\+\d+)?( drop (\d*)(\s*)(high|low))?$/i,
+	verbosity : 1,
+	replyf    : function(to, from, input, match) {
+		var dice, drop, plus, side, size;
+		var out, temp, total;
+		
+		dice = int(match[1]);
+		size = int(match[2]);
+		plus = int(match[4]);
+		
+		drop = match[6] ? int(match[6]) : 1;
+		side = match[8] === "high" ? "high" : "low";
+		
+		out  = [];
+		temp = [];
+		
+		for(var i = 0; i < dice; i++) {
+			out.push(rand(0, size) + 1);
+			temp.push(out[i]);
+		}
+		
+		if (drop && side === "low") {
+			temp = _.sortBy(temp).slice(drop);
+		}
+		else if (drop && side === "high") {
+			temp = _.sortBy(temp).slice(0, Math.max(0, dice - drop));
+		}
+		
+		total = _.reduce(temp,function(m, v) {
+			return m + v;
+		},plus);
+		
+		return U("rolled [%s], got [%s]+%d = %d after dropping %d %s rolls",
+			out.join(", ")
+			temp.join(", "),
+			plus,
+			total,
+			drop,
+			side
+		);
+	}
+},
+
 {
 	trigger   : U("command: %s.", help.rand.syntax),
 	pattern   : /^(indef|multi|rand) \w+$/i,
