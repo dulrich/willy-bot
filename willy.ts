@@ -1390,7 +1390,7 @@ var command_list:Command[] = [{
 		},plus);
 		
 		return U("rolled [%s], got [%s]+%d = %d after dropping %d %s rolls",
-			out.join(", ")
+			out.join(", "),
 			temp.join(", "),
 			plus,
 			total,
