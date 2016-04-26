@@ -344,10 +344,15 @@ function replace_tokens(str, from, m_match) {
 	});
 	
 	out = out.replace(/\?from\b/g, from);
-	out = out.replace(/\?match0?\b/g, (m_match && m_match[0]) || "");
-	out = out.replace(/\?match1\b/g,  (m_match && m_match[1]) || "");
-	out = out.replace(/\?match2\b/g,  (m_match && m_match[2]) || "");
-	out = out.replace(/\?match3\b/g,  (m_match && m_match[3]) || "");
+	out = out.replace(/\?(c)?match(\d)?\b/g, function(match, caps, n) {
+		n = int(n);
+		
+		var val = (m_match && m_match[n]) || "";
+		
+		if (caps) val = upperCase(val);
+		
+		return val;
+	});
 	
 	rx_int = /\?(t)?rand_(int|eighth)([\d_]+)?/gi;
 	out = out.replace(rx_int, function(match, text, type, range):string {
