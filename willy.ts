@@ -1372,7 +1372,7 @@ var command_list:Command[] = [{
 		size = int(match[2]);
 		plus = int(match[4]);
 		
-		drop = match[6] ? int(match[6]) : 1;
+		drop = match[6] ? int(match[6]) : 0;
 		side = match[8] === "high" ? "high" : "low";
 		
 		out  = [];
