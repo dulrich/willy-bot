@@ -308,7 +308,7 @@ function randish_el(list) {
 	var min, max;
 	
 	min = 0;
-	max = list.length - 1;
+	max = list.length;
 	
 	if (state.next_rand !== null) {
 		if (state.next_rand < min) {
