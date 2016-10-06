@@ -34,7 +34,8 @@
 		"syntax" : "match /<pattern>/ reply <reply>",
 		"notes"  : [
 			"* pattern is a regular expression, use \\ for character classes, etc",
-			"* reply is the rest of the message; use ?rand_<list> for more fun"
+			"* reply is the rest of the message; use ?rand_<list> for more fun",
+			"* %<list>% matches against any element of <list>"
 		]
 	},
 	"meta" : {
